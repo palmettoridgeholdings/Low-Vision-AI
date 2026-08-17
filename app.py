@@ -9,7 +9,7 @@ load_dotenv()
 
 APP_NAME = "Access AI"
 MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6")
-PROMPT_PATH = Path(__file__).parent / "prompts" / "system_prompt.txt"
+PROMPT_PATH = Path(__file__).parent / "system_prompt.txt"
 
 st.set_page_config(
     page_title=APP_NAME,
