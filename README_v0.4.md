@@ -1,0 +1,1 @@
+# Access AI v0.4\nCamera + Read Mode: document reading, scene description, and find/inspect with uncertainty safeguards.\n
