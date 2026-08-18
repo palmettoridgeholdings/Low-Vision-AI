@@ -1,1 +1,0 @@
-streamlit>=1.40\nopenai>=1.0\npython-dotenv>=1.0\n
