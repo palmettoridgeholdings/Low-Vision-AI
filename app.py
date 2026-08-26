@@ -1,6 +1,7 @@
 import os
 import tempfile
 import base64
+import hashlib
 from pathlib import Path
 
 import streamlit as st
@@ -31,6 +32,16 @@ st.markdown(
       }
       textarea {font-size: 1.1rem !important;}
       [data-testid="stChatMessage"] {font-size: 1.06rem;}
+      button:focus-visible, input:focus-visible, textarea:focus-visible,
+      [role="radio"]:focus-visible, [role="combobox"]:focus-visible {
+          outline: 3px solid #ffd43b !important;
+          outline-offset: 3px !important;
+      }
+      [data-testid="stBaseButton-primary"] {
+          background-color: #a61b1b;
+          border-color: #a61b1b;
+          color: #ffffff;
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -51,11 +62,31 @@ defaults = {
     "last_transcript": "",
     "processed_audio_id": None,
     "setup_audio": None,
+    "setup_audio_step": None,
+    "setup_audio_error": None,
     "camera_answer": None,
+    "last_audio_text": "",
+    "voice_notice": None,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+if (
+    st.session_state.interaction == "Large text"
+    or "low vision" in st.session_state.vision.lower()
+):
+    st.markdown(
+        """
+        <style>
+          .stApp, .stApp p, .stApp label, .stApp input, .stApp textarea,
+          .stApp [data-testid="stChatMessage"] {font-size: 1.2rem !important;}
+          .stApp h1 {font-size: 2.5rem !important;}
+          .stApp h2 {font-size: 2rem !important;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def api_key():
@@ -73,6 +104,19 @@ def client():
     if not k:
         raise RuntimeError("OPENAI_API_KEY is missing.")
     return OpenAI(api_key=k)
+
+
+def capability_error(action, error):
+    """Return an actionable message without exposing provider internals."""
+    if isinstance(error, RuntimeError) and "OPENAI_API_KEY" in str(error):
+        return (
+            f"{action} needs an OpenAI API key. Add it to your local environment "
+            "or Streamlit secrets, then try again."
+        )
+    return (
+        f"{action} could not be completed. Check the network connection and API "
+        "access, then try again. Your other settings and results are unchanged."
+    )
 
 
 def speech(text):
@@ -120,14 +164,17 @@ Preferred answer style: {st.session_state.detail}
 """
 
 
-def ask_text():
+def ask_text(question):
+    recent_messages = st.session_state.messages[-11:] + [
+        {"role": "user", "content": question}
+    ]
     kwargs = {
         "model": MODEL,
         "reasoning": {"effort": "low"},
         "instructions": instructions(),
         "input": [
             {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages[-12:]
+            for m in recent_messages
         ],
     }
     if st.session_state.web_search:
@@ -139,14 +186,28 @@ def process_question(q):
     q = q.strip()
     if not q:
         return
-    st.session_state.messages.append({"role": "user", "content": q})
     with st.spinner("Thinking…"):
-        answer = ask_text()
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+        answer = ask_text(q)
+    st.session_state.messages.extend(
+        [
+            {"role": "user", "content": q},
+            {"role": "assistant", "content": answer},
+        ]
+    )
+    st.session_state.last_audio_text = answer
+    st.session_state.voice_notice = None
 
     if st.session_state.auto_speak:
-        with st.spinner("Preparing spoken answer…"):
-            st.session_state.last_audio = speech(answer)
+        try:
+            with st.spinner("Preparing spoken answer…"):
+                st.session_state.last_audio = speech(answer)
+        except Exception as error:
+            st.session_state.last_audio = None
+            st.session_state.voice_notice = capability_error("Spoken answer", error)
+    else:
+        st.session_state.last_audio = None
+
+    return answer
 
 
 def analyze_image(image_bytes, mode, question):
@@ -218,11 +279,59 @@ Accuracy and explicit uncertainty matter more than confidence.
     return r.output_text
 
 
-def play_setup_audio(text):
+def clear_setup_audio():
+    st.session_state.setup_audio = None
+    st.session_state.setup_audio_step = None
+    st.session_state.setup_audio_error = None
+
+
+def apply_auto_speak_change():
+    if not st.session_state.auto_speak:
+        st.session_state.last_audio = None
+        st.session_state.voice_notice = None
+
+
+def render_setup_audio(step_id, text):
+    """Generate setup speech only after an explicit user action."""
+    if st.button("Hear this step", key=f"hear_setup_{step_id}"):
+        try:
+            with st.spinner("Preparing spoken setup instructions…"):
+                st.session_state.setup_audio = speech(text)
+            st.session_state.setup_audio_step = step_id
+            st.session_state.setup_audio_error = None
+        except Exception as error:
+            st.session_state.setup_audio = None
+            st.session_state.setup_audio_step = None
+            st.session_state.setup_audio_error = capability_error(
+                "Spoken setup", error
+            )
+
+    if st.session_state.setup_audio_error:
+        st.warning(st.session_state.setup_audio_error)
+
+    if (
+        st.session_state.setup_audio_step == step_id
+        and st.session_state.setup_audio is not None
+    ):
+        st.caption(
+            "AI-generated spoken setup instructions. If playback does not start, "
+            "activate Play in the audio controls."
+        )
+        st.audio(st.session_state.setup_audio, format="audio/mp3", autoplay=True)
+
+
+def prepare_camera_speech(answer):
+    st.session_state.last_audio_text = answer
+    st.session_state.voice_notice = None
+    if not st.session_state.auto_speak:
+        st.session_state.last_audio = None
+        return
     try:
-        st.session_state.setup_audio = speech(text)
-    except Exception:
-        st.session_state.setup_audio = None
+        with st.spinner("Preparing spoken camera answer…"):
+            st.session_state.last_audio = speech(answer)
+    except Exception as error:
+        st.session_state.last_audio = None
+        st.session_state.voice_notice = capability_error("Spoken camera answer", error)
 
 
 # -------------------------
@@ -232,49 +341,57 @@ if not st.session_state.onboarded:
     st.title("🔊 Welcome to Access AI")
     st.write("This setup is designed to be completed without sight.")
 
+    if not api_key():
+        st.info(
+            "Spoken setup is unavailable until an OpenAI API key is configured. "
+            "All setup questions remain available as text and work with a screen reader."
+        )
+
     step = st.session_state.step
 
     if step == 0:
         text = (
             "Welcome to Access AI. This setup can be completed without sight. "
-            "If you use TalkBack, swipe right until you hear Start accessible setup, "
-            "then double tap anywhere to activate it."
+            "Activate Hear this step for spoken instructions, or activate Start "
+            "accessible setup to continue."
         )
-        if st.session_state.setup_audio is None:
-            play_setup_audio(text)
-        if st.session_state.setup_audio:
-            st.caption("AI-generated spoken setup instructions")
-            st.audio(st.session_state.setup_audio, format="audio/mp3", autoplay=True)
+        st.write(
+            "Activate **Hear this step** for audio, or **Start accessible setup** "
+            "to continue."
+        )
+        render_setup_audio("welcome", text)
 
         if st.button("Start accessible setup", type="primary"):
             st.session_state.step = 1
-            st.session_state.setup_audio = None
+            clear_setup_audio()
             st.rerun()
         st.stop()
 
     if step == 1:
         st.header("1 of 3 — Vision")
+        render_setup_audio(
+            "vision",
+            "Step one. Choose the vision option that best matches how you want "
+            "Access AI to assist you. Then activate Continue.",
+        )
         st.radio(
             "Vision preference",
             ["Blind", "Severe low vision", "Low vision", "Sighted caregiver", "Prefer not to say"],
             key="vision",
         )
-        if st.session_state.setup_audio is None:
-            play_setup_audio(
-                "Step one. Choose the vision option that best matches how you want "
-                "Access AI to assist you. Then activate Continue."
-            )
-        if st.session_state.setup_audio:
-            st.audio(st.session_state.setup_audio, format="audio/mp3", autoplay=True)
-
         if st.button("Continue", type="primary"):
             st.session_state.step = 2
-            st.session_state.setup_audio = None
+            clear_setup_audio()
             st.rerun()
         st.stop()
 
     if step == 2:
         st.header("2 of 3 — Interaction")
+        render_setup_audio(
+            "interaction",
+            "Step two. Choose voice first, screen reader and keyboard, refreshable "
+            "Braille, large text, or combination. Then activate Continue.",
+        )
         st.radio(
             "Primary interaction preference",
             [
@@ -286,21 +403,18 @@ if not st.session_state.onboarded:
             ],
             key="interaction",
         )
-        if st.session_state.setup_audio is None:
-            play_setup_audio(
-                "Step two. Choose voice first, screen reader and keyboard, refreshable Braille, "
-                "large text, or combination. Then activate Continue."
-            )
-        if st.session_state.setup_audio:
-            st.audio(st.session_state.setup_audio, format="audio/mp3", autoplay=True)
-
         if st.button("Continue", type="primary"):
             st.session_state.step = 3
-            st.session_state.setup_audio = None
+            clear_setup_audio()
             st.rerun()
         st.stop()
 
     st.header("3 of 3 — Device and answers")
+    render_setup_audio(
+        "device",
+        "Final step. Choose your device, spoken answer preference, and answer style. "
+        "Then activate Finish setup.",
+    )
     st.selectbox(
         "Platform or screen reader",
         [
@@ -313,24 +427,20 @@ if not st.session_state.onboarded:
         ],
         key="platform",
     )
-    st.checkbox("Automatically speak answers", key="auto_speak")
+    st.checkbox(
+        "Automatically speak answers",
+        key="auto_speak",
+        on_change=apply_auto_speak_change,
+    )
     st.selectbox(
         "Answer style",
         ["Step-by-step", "Short and direct", "Detailed", "Conversational"],
         key="detail",
     )
 
-    if st.session_state.setup_audio is None:
-        play_setup_audio(
-            "Final step. Choose your device, spoken answer preference, and answer style. "
-            "Then activate Finish setup."
-        )
-    if st.session_state.setup_audio:
-        st.audio(st.session_state.setup_audio, format="audio/mp3", autoplay=True)
-
     if st.button("Finish setup and open Access AI", type="primary"):
         st.session_state.onboarded = True
-        st.session_state.setup_audio = None
+        clear_setup_audio()
         st.rerun()
     st.stop()
 
@@ -339,6 +449,13 @@ if not st.session_state.onboarded:
 # MAIN APP
 # -------------------------
 st.title("🔊 Access AI")
+
+api_available = bool(api_key())
+if not api_available:
+    st.warning(
+        "AI answers, image analysis, transcription, and speech are unavailable "
+        "until an OpenAI API key is configured. Setup and preferences still work."
+    )
 
 if st.session_state.vision == "Blind":
     st.info(
@@ -383,7 +500,11 @@ with st.expander("Accessibility and voice preferences"):
         key="detail",
     )
     st.checkbox("Allow web research when useful", key="web_search")
-    st.checkbox("Automatically speak answers", key="auto_speak")
+    st.checkbox(
+        "Automatically speak answers",
+        key="auto_speak",
+        on_change=apply_auto_speak_change,
+    )
     st.selectbox(
         "AI voice",
         ["cedar", "marin", "coral", "alloy", "ash", "nova", "sage", "shimmer", "verse", "onyx"],
@@ -393,7 +514,7 @@ with st.expander("Accessibility and voice preferences"):
     if st.button("Run accessible setup again"):
         st.session_state.onboarded = False
         st.session_state.step = 0
-        st.session_state.setup_audio = None
+        clear_setup_audio()
         st.rerun()
 
 
@@ -416,6 +537,10 @@ st.write(
 )
 
 photo = st.camera_input("Take a picture")
+st.caption(
+    "If this device has no camera or camera permission is denied, continue with "
+    "the text question area below."
+)
 camera_question = st.text_input(
     "Optional question about the picture",
     placeholder="Example: How much is due and when?",
@@ -426,14 +551,11 @@ if photo is not None and st.button("Analyze picture", type="primary"):
         with st.spinner("Analyzing picture…"):
             answer = analyze_image(photo.getvalue(), mode, camera_question)
         st.session_state.camera_answer = answer
-
-        if st.session_state.auto_speak:
-            with st.spinner("Preparing spoken camera answer…"):
-                st.session_state.last_audio = speech(answer)
+        prepare_camera_speech(answer)
 
         st.rerun()
-    except Exception as e:
-        st.error(f"Camera analysis error: {e}")
+    except Exception as error:
+        st.error(capability_error("Camera analysis", error))
 
 if st.session_state.camera_answer:
     st.subheader("Camera result")
@@ -450,11 +572,15 @@ audio = st.audio_input(
     "Record your question",
     sample_rate=16000,
     key="voice_recorder",
+    disabled=not api_available,
 )
+
+if not api_available:
+    st.caption("Voice recording requires configured API access. Text input remains available.")
 
 if audio is not None:
     b = audio.getvalue()
-    audio_id = f"{len(b)}-{hash(b[:128])}"
+    audio_id = hashlib.sha256(b).hexdigest()
     if audio_id != st.session_state.processed_audio_id:
         try:
             with st.spinner("Listening…"):
@@ -464,8 +590,8 @@ if audio is not None:
             if q:
                 process_question(q)
                 st.rerun()
-        except Exception as e:
-            st.error(f"Voice error: {e}")
+        except Exception as error:
+            st.error(capability_error("Voice question", error))
 
 if st.session_state.last_transcript:
     st.caption("Most recent voice transcript: " + st.session_state.last_transcript)
@@ -480,12 +606,15 @@ with st.form("ask_form", clear_on_submit=True):
     q = st.text_area("Your question", height=100)
     submitted = st.form_submit_button("Ask Access AI")
 
+if submitted and not q.strip():
+    st.warning("Enter a question before activating Ask Access AI.")
+
 if submitted and q.strip():
     try:
         process_question(q)
         st.rerun()
-    except Exception as e:
-        st.error(f"Request error: {e}")
+    except Exception as error:
+        st.error(capability_error("Your question", error))
 
 
 # -------------------------
@@ -501,7 +630,8 @@ for m in st.session_state.messages:
 # -------------------------
 # SPOKEN ANSWER
 # -------------------------
-answers = [m["content"] for m in st.session_state.messages if m["role"] == "assistant"]
+if st.session_state.voice_notice:
+    st.warning(st.session_state.voice_notice)
 
 if st.session_state.last_audio:
     st.header("🔊 Spoken answer")
@@ -512,20 +642,26 @@ if st.session_state.last_audio:
     with c1:
         if st.button("🔁 Repeat last spoken answer"):
             try:
-                text_to_repeat = (
-                    st.session_state.camera_answer
-                    if st.session_state.camera_answer
-                    else (answers[-1] if answers else "")
-                )
+                text_to_repeat = st.session_state.last_audio_text
                 if text_to_repeat:
                     st.session_state.last_audio = speech(text_to_repeat)
+                    st.session_state.voice_notice = None
                     st.rerun()
-            except Exception as e:
-                st.error(f"Speech error: {e}")
+            except Exception as error:
+                st.error(capability_error("Spoken answer", error))
     with c2:
         if st.button("🛑 Stop speaking"):
             st.session_state.last_audio = None
             st.rerun()
+elif st.session_state.last_audio_text and st.session_state.auto_speak:
+    if st.button("🔊 Speak latest answer"):
+        try:
+            with st.spinner("Preparing spoken answer…"):
+                st.session_state.last_audio = speech(st.session_state.last_audio_text)
+            st.session_state.voice_notice = None
+            st.rerun()
+        except Exception as error:
+            st.error(capability_error("Spoken answer", error))
 
 st.caption(
     "Access AI prototype. Camera assistance is not guaranteed navigation or safety guidance. "
