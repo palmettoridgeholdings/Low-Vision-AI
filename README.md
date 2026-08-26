@@ -88,7 +88,7 @@ OPENAI_MODEL=gpt-5.6
 OPENAI_API_KEY = "your-key"
 ```
 
-Never commit either file or paste a key into source code. Both secret-file locations are ignored by Git. The OpenAI client also reads `OPENAI_API_KEY` directly from the environment, consistent with the [official OpenAI API reference](https://developers.openai.com/api/reference/python/resources/skills/methods/create).
+Never commit either file or paste a key into source code. Both secret-file locations are ignored by Git. The OpenAI client also reads `OPENAI_API_KEY` directly from the environment, consistent with the [official OpenAI developer quickstart](https://platform.openai.com/docs/quickstart/make-your-first-api-request).
 
 ## Testing
 
