@@ -18,10 +18,24 @@ The spike does not modify camera assistance, document reading, scene description
 - The component owns one `<audio>` element and the Pause/Resume, Repeat, Stop voice, restore voice, status, and blocked-autoplay controls.
 - Native Streamlit controls retain the setup form and normal browser, TalkBack, and VoiceOver navigation.
 - No touch, swipe, or directional-gesture handler is registered.
-- A versioned JSON manifest supplies the visible transcript, speech script, static audio filename, and test expectations.
+- Content-version 2 of the JSON manifest supplies the visible transcript, speech script, static audio filename, SHA-256 integrity value, and test expectations.
 - Offline Windows SAPI generated the committed WAV files. Runtime playback needs no API key or synthesis request.
 - Server command and playback IDs are monotonic. Repeated reruns keep the same command ID; the component ignores that duplicate command.
 - Player diagnostics use a bounded V2 state buffer so rapid events are not lost. They retain only named events and bounded identifiers; messages, stacks, audio, and provider details are discarded.
+- On the Vision step, the visible transcript and native task controls precede secondary playback controls and diagnostics in document order. **Use recommended blind settings** is the first task control; **Customize accessibility settings** reveals the existing individual choices.
+
+## Recommended blind profile
+
+The shortcut applies these explicit settings and speaks a versioned confirmation before the user opens the app:
+
+- Vision: Blind
+- Interaction: Combination
+- Platform or screen reader: Other / Not sure
+- Access AI setup speech: On
+- Automatically speak answers: On
+- Answer style: Step-by-step
+
+The confirmation screen provides **Customize accessibility settings**, which returns to the Vision step with the individual controls revealed and the applied values still available for editing. The app does not infer that a screen reader is active from a user's vision choice, and it does not detect assistive technology or connected Braille hardware.
 
 The existing V1 component is retained unchanged as the production comparison. V1 sends each player event to Python, triggers a full rerun, and then requests a new script-initiated playback from an iframe. V2 removes the iframe boundary and keeps one controller element mounted, but physical Android and iPhone testing is still required to establish whether this materially improves mobile playback.
 
@@ -74,11 +88,18 @@ Run each case in a fresh private tab and again in a normal returning tab:
 3. Activate it once by touch. Repeat with Enter and Space on a Bluetooth keyboard.
 4. Confirm the welcome completes and the setup-guidance choice appears.
 5. Keep Access AI speech enabled and complete every step. Record any silent step, repeated step, overlap, focus loss, or unexpected restart.
-6. Repeat setup using screen-reader-only operation.
-7. Exercise Pause, Resume, Repeat instruction, Stop voice, and Turn on Access AI speech at every step.
-8. Navigate only with standard TalkBack or VoiceOver gestures. Confirm the app does not consume one-finger directional swipes.
-9. Test 200% and 400% text sizing, portrait and landscape, speaker and Bluetooth audio, and background/foreground interruption.
-10. Do not label the spike mobile-successful until both physical-device journeys pass.
+6. On Vision, confirm **Use recommended blind settings** is reached before secondary playback controls and diagnostics. Activate it and verify every announced setting.
+7. From confirmation, activate **Customize accessibility settings** and verify the individual Vision, Interaction, Device, answer-speech, and answer-style controls remain operable.
+8. Repeat setup using screen-reader-only operation.
+9. Exercise Pause, Resume, Repeat instruction, Stop voice, and Turn on Access AI speech at every step.
+10. Navigate only with standard TalkBack or VoiceOver gestures. Confirm the app does not consume one-finger directional swipes.
+11. Test keyboard and connected Braille-display navigation without assuming or attempting to detect the hardware.
+12. Test 200% and 400% text sizing, portrait and landscape, speaker and Bluetooth audio, and background/foreground interruption.
+13. Do not label the spike mobile-successful until TalkBack, VoiceOver, keyboard, and Braille-device journeys physically pass.
+
+## Deferred speech-recognition experiment
+
+Speech recognition is intentionally absent from this change. Browser recognition availability and microphone-permission behavior are not reliable enough to make voice input the only setup path. A later optional experiment may evaluate it as an additional input method after the semantic touch, keyboard, screen-reader, and Braille-compatible path has passed physical-device testing.
 
 ## Anonymous public-access evidence
 
@@ -98,6 +119,6 @@ Conclusion: the landing page is public, but anonymous public access to the Strea
 - Automated keyboard events may not receive the same browser media-policy activation as physical input.
 - The spike uses a persistent HTML media element, not a native mobile audio session.
 - Browser backgrounding, audio-focus changes, and operating-system interruptions can still suspend playback.
-- Static WAV assets add approximately 3.5 MB to the branch and use one prototype voice.
+- Static WAV assets add approximately 5.3 MB to the branch and use one prototype voice.
 - Completion and speech mode remain Streamlit-session state during this contained spike; durable returning-user storage is deferred.
 - Diagnostics are held only in current Streamlit session state and are not uploaded or persisted.
