@@ -1,0 +1,6 @@
+# Direct runtime dependencies. Compile with:
+# python -m piptools compile --output-file requirements.txt requirements.in
+streamlit>=1.40
+openai>=1.0
+python-dotenv>=1.0
+
