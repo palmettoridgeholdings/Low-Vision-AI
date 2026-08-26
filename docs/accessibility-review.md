@@ -17,7 +17,7 @@ Status: good baseline, with a framework limitation to monitor.
 - Onboarding exposes semantic headings, labeled radio groups, labeled comboboxes, and named buttons.
 - Main inputs are named **Camera task**, **Take a picture**, **Optional question about the picture**, **Record your question**, and **Your question**.
 - Status, warning, and error messages use Streamlit semantic message containers.
-- Generated audio is preceded by visible text explaining that it is AI-generated and how to start playback manually.
+- The blocked-autoplay fallback has the explicit accessible name **Access AI. Tap anywhere to begin spoken setup.** and receives programmatic focus.
 - Streamlit's internal selectbox disclosure buttons may be announced only as **Open**. The associated combobox inputs do retain their specific labels. Recheck this whenever Streamlit is upgraded.
 
 ### Keyboard navigation
@@ -62,9 +62,12 @@ Status: improved.
 
 Status: materially improved, with browser and service dependencies.
 
-- Setup speech is requested with an explicit **Hear this step** action. This avoids making a paid request on each rerun and gives autoplay a user gesture.
+- Setup attempts welcome speech immediately and records each synthesis attempt so a rerun cannot duplicate the API request.
+- If autoplay is rejected, a full-screen control receives focus and accepts tap, Enter, or Space. No custom directional swipe competes with TalkBack or VoiceOver navigation.
+- One successful autoplay or unlock action enables automatic speech on later setup steps; there are no per-step **Hear this step** buttons.
+- A separate visible **Start accessible setup** control preserves the nonspoken visual path.
 - Every spoken instruction and answer has a visible text equivalent.
-- If autoplay is still blocked, the audio player's Play control is announced in nearby instructions.
+- If a browser unexpectedly revokes playback permission on a later step, the same player can expose its tap/keyboard fallback again without synthesizing duplicate audio.
 - Speech-generation failure is nonfatal, and text-only operation remains available.
 - Voice recording is disabled with a clear explanation when API access is unavailable.
 - Voice-first operation still depends on browser audio support, microphone permission for input, network connectivity, and API access.
@@ -95,9 +98,8 @@ Before production use, test at least:
 
 ## Remaining risks
 
-- Browser autoplay behavior varies and cannot be guaranteed; manual Play remains the reliable fallback.
+- Browser autoplay behavior varies and cannot be guaranteed; the full-screen tap/keyboard unlock is the reliable fallback and still needs physical mobile testing.
 - Streamlit controls and accessibility semantics can change on dependency upgrades, which is why the version is locked and upgrades require regression testing.
 - Dynamic conversation updates should be tested for announcement timing with physical screen readers.
 - Camera and model output accuracy are functional and safety risks, not just interface-accessibility risks.
 - A live API test is still required to confirm the configured models and account permissions.
-

@@ -7,7 +7,7 @@ This is assistive software, not a navigation or safety system. A single image ca
 ## Features
 
 - Screen-reader-friendly first-run setup with vision, interaction, platform, answer-style, and speech preferences.
-- User-triggered spoken onboarding with visible text fallback.
+- Immediate spoken-onboarding attempt with a full-screen tap/keyboard fallback when autoplay is blocked.
 - Text input compatible with ordinary keyboards and refreshable Braille displays.
 - Recorded voice input and AI-generated spoken responses.
 - Camera tasks for **Read text / mail**, **Describe scene**, and **Find / inspect**.
@@ -103,7 +103,8 @@ The tests use Streamlit's application harness and a fake OpenAI client. They cov
 
 - startup and accessible onboarding;
 - missing-key behavior;
-- user-triggered onboarding speech;
+- successful and blocked onboarding autoplay;
+- tap/keyboard audio unlocking and duplicate-synthesis prevention;
 - text-only questions with speech disabled;
 - nonfatal speech-generation failure and retry availability;
 - camera-unavailable/no-photo behavior;
@@ -148,7 +149,7 @@ Streamlit installs root-level `requirements.txt` automatically. Keep secrets in 
 
 - **Screen reader:** Use headings to move among Camera assistance, Ask by voice, text/Braille input, and Conversation. Every main input has a visible accessible label.
 - **Keyboard:** Tab through controls and use Space or Enter to activate buttons. Radio groups support arrow keys. Select boxes use the browser and screen reader's normal combobox commands.
-- **Spoken setup:** Activate **Hear this step**. Audio is generated only after that action. If autoplay is blocked, use the audio player's **Play** control.
+- **Spoken setup:** Access AI attempts the welcome automatically. If the browser blocks it, the first screen becomes one large **Access AI. Tap anywhere to begin spoken setup.** control and receives focus. Tap it or press Enter/Space once; later setup steps speak automatically. A separate visible **Start accessible setup** button keeps the visual path available.
 - **Voice first:** Enable **Automatically speak answers** and choose a voice in the preferences expander. Text answers remain visible if speech generation fails.
 - **Large text:** Choose **Large text** as the primary interaction preference, or select a low-vision profile, to enlarge body text, fields, conversation text, and headings.
 - **No camera or microphone:** Continue with the text input. Denying hardware permission does not block the rest of the app.
@@ -163,7 +164,7 @@ Confirm `OPENAI_API_KEY` is available in the same shell that starts Streamlit, o
 
 ### Spoken onboarding does not start
 
-Activate **Hear this step**, wait for the audio control, and activate **Play** if the browser blocks autoplay. Confirm API access if the app reports that speech is unavailable. The text version of every setup step remains usable.
+If autoplay is blocked, activate the full-screen **Access AI. Tap anywhere to begin spoken setup.** control by tapping it or pressing Enter/Space. One activation unlocks continuous setup speech; there are no per-step speech buttons. Confirm API access if the app reports that speech is unavailable. The text version of every setup step remains usable.
 
 ### Microphone or camera is unavailable
 
@@ -190,6 +191,8 @@ requirements.in               Direct runtime dependency constraints
 requirements.txt              Exact generated runtime lock
 requirements-dev.txt          Test and lock-generation tools
 tests/test_app_smoke.py        Offline Streamlit smoke tests
+onboarding.py                  Spoken-setup state and component wrapper
+components/spoken_setup/       Accessible browser autoplay/unlock component
 docs/accessibility-review.md   Accessibility findings and manual test matrix
 docs/smart-glasses-interface.md Future modular glasses interface design
 ```
