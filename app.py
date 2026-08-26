@@ -14,6 +14,16 @@ from onboarding import (
     should_prepare_setup_audio,
     spoken_setup_player,
 )
+from onboarding_v2 import (
+    MANIFEST as SETUP_V2_MANIFEST,
+    SPIKE_FLAG as SETUP_V2_FLAG,
+    STEPS as SETUP_V2_STEPS,
+    next_state as next_setup_v2_state,
+    playback_id as setup_v2_playback_id,
+    redact_diagnostic as redact_setup_v2_diagnostic,
+    spike_enabled as setup_v2_enabled,
+    spoken_setup_controller,
+)
 
 load_dotenv()
 
@@ -79,6 +89,13 @@ defaults = {
     "camera_answer": None,
     "last_audio_text": "",
     "voice_notice": None,
+    "setup_v2_state": "welcome",
+    "setup_v2_speech_choice": "Continue Access AI spoken guidance",
+    "setup_v2_mode": "spoken",
+    "setup_v2_playback_sequence": 0,
+    "setup_v2_playback_step": None,
+    "setup_v2_event_id": None,
+    "setup_v2_diagnostics": [],
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -382,10 +399,147 @@ def prepare_camera_speech(answer):
         st.session_state.voice_notice = capability_error("Spoken camera answer", error)
 
 
+def setup_v2_command(step_id):
+    if st.session_state.setup_v2_playback_step != step_id:
+        st.session_state.setup_v2_playback_sequence += 1
+        st.session_state.setup_v2_playback_step = step_id
+    version = SETUP_V2_MANIFEST["content_version"]
+    return {
+        "playback_id": setup_v2_playback_id(
+            version,
+            step_id,
+            st.session_state.setup_v2_playback_sequence,
+        ),
+        "step_id": step_id,
+        "manifest_version": version,
+        "speech": SETUP_V2_STEPS[step_id]["speech"],
+    }
+
+
+def process_setup_v2_event(event):
+    if not isinstance(event, dict) or event.get("id") == st.session_state.setup_v2_event_id:
+        return
+    st.session_state.setup_v2_event_id = event.get("id")
+    diagnostic = redact_setup_v2_diagnostic(event)
+    st.session_state.setup_v2_diagnostics = (
+        list(st.session_state.setup_v2_diagnostics) + [diagnostic]
+    )[-20:]
+    if event.get("name") == "voice_stopped":
+        st.session_state.setup_v2_mode = "stopped"
+    elif event.get("name") == "voice_restored":
+        st.session_state.setup_v2_mode = "spoken"
+    elif (
+        event.get("name") == "playback_ended"
+        and event.get("step_id") == "welcome"
+        and st.session_state.setup_v2_state == "welcome"
+    ):
+        st.session_state.setup_v2_state = "speech_choice"
+        st.session_state.setup_v2_playback_step = None
+        st.rerun()
+
+
+def advance_setup_v2():
+    st.session_state.setup_v2_state = next_setup_v2_state(st.session_state.setup_v2_state)
+    st.session_state.setup_v2_playback_step = None
+    st.rerun()
+
+
+def render_setup_v2_spike():
+    """Render the isolated V2 onboarding path and stop before production UI."""
+    state = st.session_state.setup_v2_state
+    step = SETUP_V2_STEPS[state]
+    command = setup_v2_command(state)
+    result = spoken_setup_controller(command, st.session_state.setup_v2_mode)
+    process_setup_v2_event(getattr(result, "event", None))
+
+    st.caption(
+        f"Technical spike · disabled by default · manifest "
+        f"{SETUP_V2_MANIFEST['content_version']}"
+    )
+    st.title(f"🔊 {step['heading']}")
+    st.write(step["visible"])
+
+    if state == "welcome":
+        if st.button("Start accessible setup", type="primary"):
+            advance_setup_v2()
+        st.stop()
+
+    if state == "speech_choice":
+        st.radio(
+            "Access AI speech during setup",
+            ["Continue Access AI spoken guidance", "Use screen reader only"],
+            key="setup_v2_speech_choice",
+        )
+        if st.button("Continue", type="primary"):
+            st.session_state.setup_v2_mode = (
+                "spoken"
+                if st.session_state.setup_v2_speech_choice.startswith("Continue")
+                else "stopped"
+            )
+            advance_setup_v2()
+        st.stop()
+
+    if state == "vision":
+        st.radio(
+            "Vision preference",
+            ["Blind", "Severe low vision", "Low vision", "Sighted caregiver", "Prefer not to say"],
+            key="vision",
+        )
+        if st.button("Continue", type="primary"):
+            advance_setup_v2()
+        st.stop()
+
+    if state == "interaction":
+        st.radio(
+            "Primary interaction preference",
+            [
+                "Voice first",
+                "Screen reader and keyboard",
+                "Refreshable Braille display",
+                "Large text",
+                "Combination",
+            ],
+            key="interaction",
+        )
+        if st.button("Continue", type="primary"):
+            advance_setup_v2()
+        st.stop()
+
+    st.selectbox(
+        "Platform or screen reader",
+        [
+            "Android / TalkBack",
+            "iPhone / VoiceOver",
+            "Windows / NVDA",
+            "Windows / JAWS",
+            "Mac / VoiceOver",
+            "Other / Not sure",
+        ],
+        key="platform",
+    )
+    st.checkbox(
+        "Automatically speak answers",
+        key="auto_speak",
+        on_change=apply_auto_speak_change,
+    )
+    st.selectbox(
+        "Answer style",
+        ["Step-by-step", "Short and direct", "Detailed", "Conversational"],
+        key="detail",
+    )
+    if st.button("Finish setup and open Access AI", type="primary"):
+        st.session_state.onboarded = True
+        st.rerun()
+    st.stop()
+
+
 # -------------------------
 # ACCESSIBLE FIRST-RUN SETUP
 # -------------------------
 if not st.session_state.onboarded:
+    if setup_v2_enabled():
+        render_setup_v2_spike()
+
     step = st.session_state.step
     api_available_for_setup = bool(api_key())
 

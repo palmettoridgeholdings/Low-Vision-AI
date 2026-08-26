@@ -1,0 +1,36 @@
+{
+  "schema_version": "access-ai.spoken-setup.v2",
+  "content_version": "2026-08-26.1",
+  "steps": [
+    {
+      "id": "welcome",
+      "heading": "Welcome to Access AI",
+      "visible": "This setup can be completed without sight. Access AI will ask how you want to use the app.",
+      "speech": "Welcome to Access AI. This setup can be completed without sight. I am going to start the assisted setup now. You can stop Access AI speech at any time, and your screen reader will continue to work normally."
+    },
+    {
+      "id": "speech_choice",
+      "heading": "Choose spoken guidance",
+      "visible": "Choose whether Access AI should continue speaking setup instructions. Your screen reader remains available either way.",
+      "speech": "Choose whether you want Access AI to continue speaking setup instructions. Select Continue Access AI spoken guidance, or Use screen reader only. Then activate Continue."
+    },
+    {
+      "id": "vision",
+      "heading": "1 of 3 — Vision",
+      "visible": "Choose the vision option that best matches how you want Access AI to assist you.",
+      "speech": "Step one. Vision. Choose the option that best matches how you want Access AI to assist you. Then activate Continue."
+    },
+    {
+      "id": "interaction",
+      "heading": "2 of 3 — Interaction",
+      "visible": "Choose your primary interaction preference.",
+      "speech": "Step two. Interaction. Choose voice first, screen reader and keyboard, refreshable Braille display, large text, or combination. Then activate Continue."
+    },
+    {
+      "id": "device",
+      "heading": "3 of 3 — Device and answers",
+      "visible": "Choose your device, spoken-answer preference, and answer style.",
+      "speech": "Final step. Choose your device or screen reader, whether answers should be spoken automatically, and your preferred answer style. Then activate Finish setup and open Access AI."
+    }
+  ]
+}

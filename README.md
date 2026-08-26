@@ -200,3 +200,10 @@ docs/smart-glasses-interface.md Future modular glasses interface design
 ## Smart-glasses integration
 
 No smart-glasses SDK or device code is implemented. A low-cost, vendor-neutral future interface is documented in [docs/smart-glasses-interface.md](docs/smart-glasses-interface.md).
+
+## Contained V2 spoken-onboarding spike
+
+A disabled-by-default persistent-controller prototype is documented in
+[docs/spoken-onboarding-v2-spike.md](docs/spoken-onboarding-v2-spike.md). It is a
+feature-branch experiment, not production behavior, and must not be enabled in a
+deployment or merged without approval.

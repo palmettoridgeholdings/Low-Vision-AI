@@ -1,0 +1,40 @@
+.access-ai-speech-controller {
+  border: 2px solid var(--st-border-color, #777);
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  margin-block: 0.5rem 1rem;
+}
+.access-ai-speech-controller h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.35rem;
+}
+.access-ai-speech-controller [data-status] { margin: 0 0 0.6rem; }
+.speech-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.5rem;
+}
+.speech-controls button, .unlock {
+  min-height: 3rem;
+  border: 2px solid currentColor;
+  border-radius: 0.5rem;
+  background: var(--st-secondary-background-color, #eee);
+  color: var(--st-text-color, #111);
+  font: inherit;
+  font-weight: 700;
+}
+.speech-controls button:focus-visible, .unlock:focus-visible {
+  outline: 4px solid #ffd43b;
+  outline-offset: 3px;
+}
+.unlock {
+  width: 100%;
+  min-height: 8rem;
+  margin-top: 0.75rem;
+  background: #111827;
+  color: #fff;
+  font-size: 1.25rem;
+}
+details { margin-top: 0.75rem; }
+[data-diagnostics] { font-family: ui-monospace, monospace; font-size: 0.8rem; }
+[hidden] { display: none !important; }
