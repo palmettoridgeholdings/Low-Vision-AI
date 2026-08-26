@@ -1,0 +1,12 @@
+.env
+.env.local
+.streamlit/secrets.toml
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+pytest-cache-files-*/
+*.py[cod]
+.coverage
+htmlcov/
+.tmp/
