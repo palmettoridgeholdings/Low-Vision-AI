@@ -4,7 +4,6 @@ function createController(component) {
   const { parentElement } = component;
   const audio = parentElement.querySelector("#access-setup-audio");
   const status = parentElement.querySelector("#access-voice-status");
-  const instructionText = parentElement.querySelector("#access-instruction-text");
   const unlock = parentElement.querySelector("#access-unlock");
   const pauseResume = parentElement.querySelector("#access-pause-resume");
   const repeat = parentElement.querySelector("#access-repeat");
@@ -169,7 +168,6 @@ function createController(component) {
     update(nextComponent) {
       state.setStateValue = nextComponent.setStateValue;
       const data = nextComponent.data || {};
-      instructionText.textContent = data.visible_text || "";
       state.currentViewInstructionId = data.instruction_id || null;
 
       let restoreFromServerModeChange = false;

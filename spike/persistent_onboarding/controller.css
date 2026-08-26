@@ -21,8 +21,7 @@
   margin: 0 0 0.5rem;
 }
 
-#access-voice-status,
-#access-instruction-text {
+#access-voice-status {
   font-size: clamp(1rem, 3.5vw, 1.2rem);
   line-height: 1.5;
   margin: 0.4rem 0;

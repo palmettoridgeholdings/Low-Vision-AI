@@ -13,6 +13,7 @@ class SetupStage(StrEnum):
     INTERACTION = "interaction"
     DEVICE = "device"
     COMPLETE = "complete"
+    RECOMMENDED_COMPLETE = "recommended_complete"
 
 
 class SpeechMode(StrEnum):

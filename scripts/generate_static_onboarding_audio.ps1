@@ -44,7 +44,8 @@ try {
             $stream.Close()
             [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($stream)
         }
-        Write-Output "Generated $target"
+        $audioHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $target).Hash.ToLower()
+        Write-Output "Generated $target (sha256: $audioHash)"
     }
 }
 finally {

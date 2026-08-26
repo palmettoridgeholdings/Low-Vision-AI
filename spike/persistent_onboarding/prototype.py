@@ -24,6 +24,13 @@ GUIDANCE_OPTIONS = {
     "Continue Access AI spoken guidance": SpeechMode.ACCESS_AI,
     "Screen-reader-only operation": SpeechMode.SCREEN_READER_ONLY,
 }
+RECOMMENDED_BLIND_PROFILE = {
+    "vision": "Blind",
+    "interaction": "Combination",
+    "platform": "Other / Not sure",
+    "auto_speak": True,
+    "detail": "Step-by-step",
+}
 SESSION_DEFAULTS = {
     "spike_setup_stage": SetupStage.WELCOME.value,
     "spike_speech_mode": SpeechMode.ACCESS_AI.value,
@@ -34,6 +41,9 @@ SESSION_DEFAULTS = {
     "spike_processed_player_events": [],
     "spike_playback_diagnostics": [],
     "spike_guidance_choice": "Continue Access AI spoken guidance",
+    "spike_pending_guidance_choice": None,
+    "spike_customize_settings": False,
+    "spike_profile_applied": False,
 }
 
 
@@ -144,9 +154,13 @@ def _apply_component_speech_mode(value: Any) -> bool:
 
     st.session_state.spike_speech_mode = mode.value
     if mode is SpeechMode.SCREEN_READER_ONLY:
-        st.session_state.spike_guidance_choice = "Screen-reader-only operation"
+        st.session_state.spike_pending_guidance_choice = (
+            "Screen-reader-only operation"
+        )
     else:
-        st.session_state.spike_guidance_choice = "Continue Access AI spoken guidance"
+        st.session_state.spike_pending_guidance_choice = (
+            "Continue Access AI spoken guidance"
+        )
         # Reuse the retained command on same-step restore. If setup advanced
         # while muted, _enter_next_stage cleared it and this creates one fresh
         # command for the current instruction.
@@ -162,6 +176,13 @@ def _on_speech_mode_change() -> None:
     _apply_component_speech_mode(_component_state_value("speech_mode"))
 
 
+def _apply_pending_guidance_choice() -> None:
+    choice = st.session_state.spike_pending_guidance_choice
+    if choice is not None:
+        st.session_state.spike_guidance_choice = choice
+        st.session_state.spike_pending_guidance_choice = None
+
+
 def _sync_guidance_choice() -> None:
     if _stage() is not SetupStage.SPEECH_MODE:
         return
@@ -175,12 +196,10 @@ def _sync_guidance_choice() -> None:
 
 def _component_data() -> dict[str, str | bool]:
     stage = _stage()
-    item = instruction(stage.value)
     command_id = st.session_state.spike_command_id
     return {
         "manifest_id": load_manifest()["manifest_id"],
         "instruction_id": stage.value,
-        "visible_text": item["visible_text"],
         "speech_mode": _speech_mode().value,
         "command_id": command_id or "",
         "playback_id": st.session_state.spike_playback_id or "",
@@ -196,47 +215,44 @@ def _enter_next_stage() -> None:
     st.rerun()
 
 
-def render_persistent_onboarding() -> None:
-    """Render the isolated setup prototype and stop the surrounding app."""
-    _initialize_state()
-    _sync_guidance_choice()
-    _issue_command()
+def _apply_recommended_blind_profile() -> None:
+    for key, value in RECOMMENDED_BLIND_PROFILE.items():
+        st.session_state[key] = value
+    st.session_state.spike_speech_mode = SpeechMode.ACCESS_AI.value
+    st.session_state.spike_guidance_choice = "Continue Access AI spoken guidance"
+    component_state = st.session_state.get(COMPONENT_KEY)
+    if isinstance(component_state, dict):
+        component_state = dict(component_state)
+        component_state["speech_mode"] = SpeechMode.ACCESS_AI.value
+        st.session_state[COMPONENT_KEY] = component_state
+    st.session_state.spike_profile_applied = True
+    st.session_state.spike_customize_settings = False
+    st.session_state.spike_setup_stage = SetupStage.RECOMMENDED_COMPLETE.value
+    _clear_command()
+    st.rerun()
 
-    # Keep the page title and current step heading first in document order.
-    # The persistent controller follows them and owns the single visible copy
-    # of the manifest instruction text.
-    stage = _stage()
-    item = instruction(stage.value)
-    st.title("🔊 Welcome to Access AI")
-    st.caption(
-        "Persistent spoken-onboarding technical spike. "
-        "The production onboarding remains available when the feature flag is off."
-    )
-    st.header(item["title"])
 
-    result = mount_controller(
-        _component_data(),
-        on_diagnostics_change=_on_diagnostics_change,
-        on_speech_mode_change=_on_speech_mode_change,
-    )
-    changed = _apply_component_speech_mode(getattr(result, "speech_mode", None))
-    changed = _process_diagnostics(getattr(result, "diagnostics", [])) or changed
-    if changed:
-        st.rerun()
+def _return_to_customize() -> None:
+    st.session_state.spike_profile_applied = False
+    st.session_state.spike_customize_settings = True
+    st.session_state.spike_setup_stage = SetupStage.VISION.value
+    _clear_command()
+    st.rerun()
 
-    with st.expander("Prototype playback diagnostics"):
-        diagnostics = list(st.session_state.spike_playback_diagnostics)
-        if diagnostics:
-            st.json(diagnostics)
-        else:
-            st.caption("No playback events have been recorded yet.")
 
+def _open_access_ai() -> None:
+    st.session_state.onboarded = True
+    st.rerun()
+
+
+def _render_primary_controls(stage: SetupStage) -> None:
+    """Render task choices before secondary playback controls and diagnostics."""
     if stage is SetupStage.WELCOME:
         st.info(
             "Access AI is attempting the welcome automatically. If the browser "
             "blocks it, use the full-screen tap or keyboard control."
         )
-        st.stop()
+        return
 
     if stage is SetupStage.SPEECH_MODE:
         st.radio(
@@ -247,23 +263,37 @@ def render_persistent_onboarding() -> None:
         if st.button("Continue", type="primary", key="spike_continue_guidance"):
             _sync_guidance_choice()
             _enter_next_stage()
-        st.stop()
+        return
 
     if stage is SetupStage.VISION:
-        st.radio(
-            "Vision preference",
-            [
-                "Blind",
-                "Severe low vision",
-                "Low vision",
-                "Sighted caregiver",
-                "Prefer not to say",
-            ],
-            key="vision",
-        )
-        if st.button("Continue", type="primary", key="spike_continue_vision"):
-            _enter_next_stage()
-        st.stop()
+        if st.button(
+            "Use recommended blind settings",
+            type="primary",
+            key="spike_recommended_blind_settings",
+        ):
+            _apply_recommended_blind_profile()
+        if st.button(
+            "Customize accessibility settings",
+            key="spike_customize_accessibility_settings",
+        ):
+            st.session_state.spike_customize_settings = True
+            st.rerun()
+        if st.session_state.spike_customize_settings:
+            st.radio(
+                "Vision preference",
+                [
+                    "Blind",
+                    "Severe low vision",
+                    "Low vision",
+                    "Sighted caregiver",
+                    "Prefer not to say",
+                ],
+                key="vision",
+            )
+            if st.button("Continue", type="primary", key="spike_continue_vision"):
+                st.session_state.spike_profile_applied = False
+                _enter_next_stage()
+        return
 
     if stage is SetupStage.INTERACTION:
         st.radio(
@@ -279,7 +309,7 @@ def render_persistent_onboarding() -> None:
         )
         if st.button("Continue", type="primary", key="spike_continue_interaction"):
             _enter_next_stage()
-        st.stop()
+        return
 
     if stage is SetupStage.DEVICE:
         st.selectbox(
@@ -302,9 +332,54 @@ def render_persistent_onboarding() -> None:
         )
         if st.button("Finish setup", type="primary", key="spike_finish_setup"):
             _enter_next_stage()
-        st.stop()
+        return
 
+    if st.button(
+        "Customize accessibility settings",
+        key="spike_return_to_customize",
+    ):
+        _return_to_customize()
     if st.button("Open Access AI", type="primary", key="spike_open_app"):
-        st.session_state.onboarded = True
+        _open_access_ai()
+
+
+def render_persistent_onboarding() -> None:
+    """Render the isolated setup prototype and stop the surrounding app."""
+    _initialize_state()
+    _apply_pending_guidance_choice()
+    _sync_guidance_choice()
+    _issue_command()
+
+    # Keep the page title, current step heading, and manifest transcript first
+    # in document order.
+    stage = _stage()
+    item = instruction(stage.value)
+    st.title("🔊 Welcome to Access AI")
+    st.caption(
+        "Persistent spoken-onboarding technical spike. "
+        "The production onboarding remains available when the feature flag is off."
+    )
+    st.header(item["title"])
+    st.write(item["visible_text"])
+
+    # The current task controls intentionally precede the secondary voice
+    # controller and diagnostics in document and keyboard focus order.
+    _render_primary_controls(stage)
+
+    result = mount_controller(
+        _component_data(),
+        on_diagnostics_change=_on_diagnostics_change,
+        on_speech_mode_change=_on_speech_mode_change,
+    )
+    changed = _apply_component_speech_mode(getattr(result, "speech_mode", None))
+    changed = _process_diagnostics(getattr(result, "diagnostics", [])) or changed
+    if changed:
         st.rerun()
+
+    with st.expander("Prototype playback diagnostics"):
+        diagnostics = list(st.session_state.spike_playback_diagnostics)
+        if diagnostics:
+            st.json(diagnostics)
+        else:
+            st.caption("No playback events have been recorded yet.")
     st.stop()
