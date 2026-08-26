@@ -1,0 +1,22 @@
+<section id="access-spoken-setup-controller" aria-labelledby="access-voice-heading">
+  <h2 id="access-voice-heading">Access AI voice controls</h2>
+  <p id="access-voice-status" role="status" aria-live="polite" aria-atomic="true">
+    Preparing spoken setup.
+  </p>
+  <p id="access-instruction-text"></p>
+  <div id="access-voice-controls" role="group" aria-label="Access AI voice controls">
+    <button id="access-pause-resume" type="button">Pause voice</button>
+    <button id="access-repeat" type="button">Repeat instruction</button>
+    <button id="access-stop" type="button">Stop voice</button>
+    <button id="access-restore" type="button" hidden>Turn on Access AI speech</button>
+  </div>
+  <button
+    id="access-unlock"
+    type="button"
+    aria-label="Access AI. Tap anywhere to begin spoken setup."
+    hidden
+  >
+    Access AI. Tap anywhere to begin spoken setup.
+  </button>
+  <audio id="access-setup-audio" preload="auto"></audio>
+</section>

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "manifest_id": "access-ai-setup-v1",
+  "audio_format": "audio/wav",
+  "instructions": [
+    {
+      "id": "welcome",
+      "title": "Welcome to Access AI",
+      "visible_text": "Welcome to Access AI. This setup works without sight. Accessible setup is beginning. Access AI will speak each step unless you choose screen-reader-only operation or stop Access AI speech.",
+      "speech": "Welcome to Access AI. This setup works without sight. Accessible setup is beginning. I will speak each step unless you choose screen reader only operation or stop Access AI speech.",
+      "audio_file": "audio/access-ai-setup-v1-welcome.wav"
+    },
+    {
+      "id": "speech_mode",
+      "title": "Choose setup guidance",
+      "visible_text": "Choose continued Access AI spoken guidance or screen-reader-only operation. Access AI spoken guidance is selected by default.",
+      "speech": "Choose your setup guidance. Continue Access AI spoken guidance, or use screen reader only operation. Access AI spoken guidance is currently selected. Then activate Continue.",
+      "audio_file": "audio/access-ai-setup-v1-speech-mode.wav"
+    },
+    {
+      "id": "vision",
+      "title": "1 of 3 — Vision",
+      "visible_text": "Choose Blind, Severe low vision, Low vision, Sighted caregiver, or Prefer not to say. Then activate Continue.",
+      "speech": "Step 1 of 3, vision. Choose Blind, Severe low vision, Low vision, Sighted caregiver, or Prefer not to say. Then activate Continue.",
+      "audio_file": "audio/access-ai-setup-v1-vision.wav"
+    },
+    {
+      "id": "interaction",
+      "title": "2 of 3 — Interaction",
+      "visible_text": "Choose Voice first, Screen reader and keyboard, Refreshable Braille display, Large text, or Combination. Then activate Continue.",
+      "speech": "Step 2 of 3, interaction. Choose Voice first, Screen reader and keyboard, Refreshable Braille display, Large text, or Combination. Then activate Continue.",
+      "audio_file": "audio/access-ai-setup-v1-interaction.wav"
+    },
+    {
+      "id": "device",
+      "title": "3 of 3 — Device and answers",
+      "visible_text": "Choose your platform or screen reader, whether answers should be spoken automatically, and your preferred answer style. Then activate Finish setup.",
+      "speech": "Step 3 of 3, device and answers. Choose your platform or screen reader, whether answers should be spoken automatically, and your preferred answer style. Then activate Finish setup.",
+      "audio_file": "audio/access-ai-setup-v1-device.wav"
+    },
+    {
+      "id": "complete",
+      "title": "Setup complete",
+      "visible_text": "Access AI is ready. Camera assistance comes first, followed by voice input and text or Braille input. Voice controls remain available when Access AI speech is on.",
+      "speech": "Setup complete. Access AI is ready. Camera assistance comes first, followed by voice input and text or Braille input. Voice controls remain available when Access AI speech is on.",
+      "audio_file": "audio/access-ai-setup-v1-complete.wav"
+    }
+  ]
+}

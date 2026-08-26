@@ -19,6 +19,9 @@ load_dotenv()
 
 MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6")
 PROMPT_PATH = Path(__file__).parent / "system_prompt.txt"
+PERSISTENT_SPEECH_SPIKE = os.getenv(
+    "ACCESS_AI_PERSISTENT_SPEECH_SPIKE", ""
+).strip().lower() in {"1", "true", "yes", "on"}
 
 st.set_page_config(
     page_title="Access AI",
@@ -385,6 +388,11 @@ def prepare_camera_speech(answer):
 # -------------------------
 # ACCESSIBLE FIRST-RUN SETUP
 # -------------------------
+if not st.session_state.onboarded and PERSISTENT_SPEECH_SPIKE:
+    from spike.persistent_onboarding import render_persistent_onboarding
+
+    render_persistent_onboarding()
+
 if not st.session_state.onboarded:
     step = st.session_state.step
     api_available_for_setup = bool(api_key())
