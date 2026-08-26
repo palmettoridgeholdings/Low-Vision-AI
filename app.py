@@ -7,6 +7,13 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
+from onboarding import (
+    SETUP_SPEECH,
+    is_new_player_event,
+    player_event_updates,
+    should_prepare_setup_audio,
+    spoken_setup_player,
+)
 
 load_dotenv()
 
@@ -63,7 +70,12 @@ defaults = {
     "processed_audio_id": None,
     "setup_audio": None,
     "setup_audio_step": None,
+    "setup_audio_attempted_step": None,
     "setup_audio_error": None,
+    "setup_speech_active": False,
+    "setup_autoplay_blocked": False,
+    "setup_component_event_id": None,
+    "setup_start_mode": None,
     "camera_answer": None,
     "last_audio_text": "",
     "voice_notice": None,
@@ -279,10 +291,12 @@ Accuracy and explicit uncertainty matter more than confidence.
     return r.output_text
 
 
-def clear_setup_audio():
+def clear_setup_audio(*, reset_attempt=False):
     st.session_state.setup_audio = None
     st.session_state.setup_audio_step = None
     st.session_state.setup_audio_error = None
+    if reset_attempt:
+        st.session_state.setup_audio_attempted_step = None
 
 
 def apply_auto_speak_change():
@@ -291,33 +305,67 @@ def apply_auto_speak_change():
         st.session_state.voice_notice = None
 
 
-def render_setup_audio(step_id, text):
-    """Generate setup speech only after an explicit user action."""
-    if st.button("Hear this step", key=f"hear_setup_{step_id}"):
-        try:
-            with st.spinner("Preparing spoken setup instructions…"):
-                st.session_state.setup_audio = speech(text)
-            st.session_state.setup_audio_step = step_id
-            st.session_state.setup_audio_error = None
-        except Exception as error:
-            st.session_state.setup_audio = None
-            st.session_state.setup_audio_step = None
-            st.session_state.setup_audio_error = capability_error(
-                "Spoken setup", error
-            )
+def prepare_setup_audio(step_id, *, enabled):
+    if not should_prepare_setup_audio(
+        step_id,
+        st.session_state.setup_audio_attempted_step,
+        enabled,
+    ):
+        return
 
-    if st.session_state.setup_audio_error:
+    st.session_state.setup_audio_attempted_step = step_id
+    try:
+        with st.spinner("Preparing spoken setup instructions…"):
+            st.session_state.setup_audio = speech(SETUP_SPEECH[step_id])
+        st.session_state.setup_audio_step = step_id
+        st.session_state.setup_audio_error = None
+    except Exception as error:
+        st.session_state.setup_audio = None
+        st.session_state.setup_audio_step = None
+        st.session_state.setup_audio_error = capability_error("Spoken setup", error)
+
+
+def process_setup_player_event(event):
+    if not is_new_player_event(event, st.session_state.setup_component_event_id):
+        return None
+
+    st.session_state.setup_component_event_id = event["id"]
+    updates = player_event_updates(event)
+    for key in ("setup_speech_active", "setup_autoplay_blocked"):
+        if key in updates:
+            st.session_state[key] = updates[key]
+
+    if event["kind"] in {"autoplay_started", "audio_unlocked"}:
+        st.session_state.setup_start_mode = "spoken"
+    elif event["kind"] == "start_visible":
+        st.session_state.setup_start_mode = "visual"
+
+    if updates.get("advance_visual") or updates.get("advance_spoken"):
+        return "advance"
+    return None
+
+
+def render_setup_player(step_id, *, first_screen, show_error=True):
+    speech_enabled = bool(api_key()) and (
+        first_screen or st.session_state.setup_speech_active
+    )
+    prepare_setup_audio(step_id, enabled=speech_enabled)
+
+    if show_error and st.session_state.setup_audio_error:
         st.warning(st.session_state.setup_audio_error)
 
     if (
-        st.session_state.setup_audio_step == step_id
-        and st.session_state.setup_audio is not None
+        st.session_state.setup_audio_step != step_id
+        or st.session_state.setup_audio is None
     ):
-        st.caption(
-            "AI-generated spoken setup instructions. If playback does not start, "
-            "activate Play in the audio controls."
-        )
-        st.audio(st.session_state.setup_audio, format="audio/mp3", autoplay=True)
+        return None
+
+    event = spoken_setup_player(
+        st.session_state.setup_audio,
+        step_id,
+        first_screen=first_screen,
+    )
+    return process_setup_player_event(event)
 
 
 def prepare_camera_speech(answer):
@@ -338,42 +386,40 @@ def prepare_camera_speech(answer):
 # ACCESSIBLE FIRST-RUN SETUP
 # -------------------------
 if not st.session_state.onboarded:
-    st.title("🔊 Welcome to Access AI")
-    st.write("This setup is designed to be completed without sight.")
-
-    if not api_key():
-        st.info(
-            "Spoken setup is unavailable until an OpenAI API key is configured. "
-            "All setup questions remain available as text and work with a screen reader."
-        )
-
     step = st.session_state.step
+    api_available_for_setup = bool(api_key())
 
     if step == 0:
-        text = (
-            "Welcome to Access AI. This setup can be completed without sight. "
-            "Activate Hear this step for spoken instructions, or activate Start "
-            "accessible setup to continue."
-        )
-        st.write(
-            "Activate **Hear this step** for audio, or **Start accessible setup** "
-            "to continue."
-        )
-        render_setup_audio("welcome", text)
-
-        if st.button("Start accessible setup", type="primary"):
+        action = render_setup_player("welcome", first_screen=True, show_error=False)
+        if action == "advance":
             st.session_state.step = 1
             clear_setup_audio()
             st.rerun()
+
+        if not api_available_for_setup or st.session_state.setup_audio_error:
+            st.title("🔊 Welcome to Access AI")
+            st.write("This setup is designed to be completed without sight.")
+            if st.session_state.setup_audio_error:
+                st.warning(st.session_state.setup_audio_error)
+            if not api_available_for_setup:
+                st.info(
+                    "Spoken setup is unavailable until an OpenAI API key is "
+                    "configured. All setup questions remain available as text and "
+                    "work with a screen reader."
+                )
+            if st.button("Start accessible setup", type="primary"):
+                st.session_state.setup_start_mode = "visual"
+                st.session_state.step = 1
+                clear_setup_audio()
+                st.rerun()
         st.stop()
+
+    st.title("🔊 Welcome to Access AI")
+    st.write("This setup is designed to be completed without sight.")
 
     if step == 1:
         st.header("1 of 3 — Vision")
-        render_setup_audio(
-            "vision",
-            "Step one. Choose the vision option that best matches how you want "
-            "Access AI to assist you. Then activate Continue.",
-        )
+        render_setup_player("vision", first_screen=False)
         st.radio(
             "Vision preference",
             ["Blind", "Severe low vision", "Low vision", "Sighted caregiver", "Prefer not to say"],
@@ -387,11 +433,7 @@ if not st.session_state.onboarded:
 
     if step == 2:
         st.header("2 of 3 — Interaction")
-        render_setup_audio(
-            "interaction",
-            "Step two. Choose voice first, screen reader and keyboard, refreshable "
-            "Braille, large text, or combination. Then activate Continue.",
-        )
+        render_setup_player("interaction", first_screen=False)
         st.radio(
             "Primary interaction preference",
             [
@@ -410,11 +452,7 @@ if not st.session_state.onboarded:
         st.stop()
 
     st.header("3 of 3 — Device and answers")
-    render_setup_audio(
-        "device",
-        "Final step. Choose your device, spoken answer preference, and answer style. "
-        "Then activate Finish setup.",
-    )
+    render_setup_player("device", first_screen=False)
     st.selectbox(
         "Platform or screen reader",
         [
@@ -514,7 +552,11 @@ with st.expander("Accessibility and voice preferences"):
     if st.button("Run accessible setup again"):
         st.session_state.onboarded = False
         st.session_state.step = 0
-        clear_setup_audio()
+        st.session_state.setup_speech_active = False
+        st.session_state.setup_autoplay_blocked = False
+        st.session_state.setup_component_event_id = None
+        st.session_state.setup_start_mode = None
+        clear_setup_audio(reset_attempt=True)
         st.rerun()
 
 

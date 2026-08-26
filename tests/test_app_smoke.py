@@ -1,63 +1,17 @@
 """Offline smoke tests for the Access AI Streamlit prototype."""
 
+import json
 from pathlib import Path
 
 import openai
 from streamlit.testing.v1 import AppTest
 
+from onboarding import UNLOCK_LABEL
+from tests.fake_openai import FakeOpenAI, MOCK_AUDIO
+
 
 APP_PATH = Path(__file__).parents[1] / "app.py"
-
-
-class FakeStreamingResponse:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_args):
-        return False
-
-    def read(self):
-        return b"mock-mp3"
-
-
-class FakeStreamingSpeech:
-    def create(self, **_kwargs):
-        FakeOpenAI.speech_calls += 1
-        if FakeOpenAI.speech_error:
-            raise RuntimeError("offline speech failure")
-        return FakeStreamingResponse()
-
-
-class FakeSpeech:
-    def __init__(self):
-        self.with_streaming_response = FakeStreamingSpeech()
-
-
-class FakeTranscriptions:
-    def create(self, **_kwargs):
-        return type("Transcription", (), {"text": "mock transcript"})()
-
-
-class FakeAudio:
-    def __init__(self):
-        self.speech = FakeSpeech()
-        self.transcriptions = FakeTranscriptions()
-
-
-class FakeResponses:
-    def create(self, **_kwargs):
-        FakeOpenAI.response_calls += 1
-        return type("Response", (), {"output_text": "Mock accessible answer."})()
-
-
-class FakeOpenAI:
-    response_calls = 0
-    speech_calls = 0
-    speech_error = False
-
-    def __init__(self, **_kwargs):
-        self.audio = FakeAudio()
-        self.responses = FakeResponses()
+COMPONENT_HTML = Path(__file__).parents[1] / "components" / "spoken_setup" / "index.html"
 
 
 def element_with_label(elements, label):
@@ -77,6 +31,24 @@ def app_at_main(monkeypatch, *, api_key=None, auto_speak=False):
     return app.run(timeout=30)
 
 
+def onboarding_app(monkeypatch):
+    FakeOpenAI.speech_calls = 0
+    FakeOpenAI.speech_error = False
+    monkeypatch.setenv("OPENAI_API_KEY", "offline-test-key")
+    monkeypatch.setattr(openai, "OpenAI", FakeOpenAI)
+    return AppTest.from_file(APP_PATH).run(timeout=30)
+
+
+def send_player_event(app, event_id, kind, *, input_kind="browser", step="welcome"):
+    app.session_state["spoken_setup_player"] = {
+        "id": event_id,
+        "kind": kind,
+        "input": input_kind,
+        "step": step,
+    }
+    return app.run(timeout=30)
+
+
 def test_startup_without_key_keeps_accessible_setup_available(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
@@ -88,19 +60,84 @@ def test_startup_without_key_keeps_accessible_setup_available(monkeypatch):
     assert any("Spoken setup is unavailable" in item.value for item in app.info)
 
 
-def test_spoken_onboarding_waits_for_user_action(monkeypatch):
-    FakeOpenAI.speech_calls = 0
-    monkeypatch.setenv("OPENAI_API_KEY", "offline-test-key")
-    monkeypatch.setattr(openai, "OpenAI", FakeOpenAI)
-    app = AppTest.from_file(APP_PATH).run(timeout=30)
-
-    assert FakeOpenAI.speech_calls == 0
-
-    element_with_label(app.button, "Hear this step").click().run(timeout=30)
+def test_onboarding_attempts_autoplay_once_without_duplicate_speech(monkeypatch):
+    app = onboarding_app(monkeypatch)
 
     assert not app.exception
     assert FakeOpenAI.speech_calls == 1
-    assert app.session_state["setup_audio"] == b"mock-mp3"
+    assert app.session_state["setup_audio"] == MOCK_AUDIO
+    assert "Hear this step" not in [button.label for button in app.button]
+
+    app.run(timeout=30)
+
+    assert FakeOpenAI.speech_calls == 1
+
+
+def test_successful_autoplay_activates_continuous_spoken_setup(monkeypatch):
+    app = onboarding_app(monkeypatch)
+
+    send_player_event(app, "autoplay-success-1", "autoplay_started")
+
+    assert app.session_state["setup_speech_active"] is True
+    assert app.session_state["setup_autoplay_blocked"] is False
+    assert app.session_state["setup_start_mode"] == "spoken"
+    assert FakeOpenAI.speech_calls == 1
+
+
+def test_blocked_autoplay_uses_full_screen_fallback_without_retry(monkeypatch):
+    app = onboarding_app(monkeypatch)
+    component_args = json.loads(app.get("component_instance")[0].proto.json_args)
+
+    send_player_event(app, "autoplay-blocked-1", "autoplay_blocked")
+
+    assert app.session_state["setup_autoplay_blocked"] is True
+    assert component_args["unlock_label"] == UNLOCK_LABEL
+    assert FakeOpenAI.speech_calls == 1
+
+
+def test_keyboard_unlock_activates_speech_and_component_has_key_handlers(monkeypatch):
+    app = onboarding_app(monkeypatch)
+    html = COMPONENT_HTML.read_text(encoding="utf-8")
+
+    send_player_event(
+        app,
+        "keyboard-unlock-1",
+        "audio_unlocked",
+        input_kind="keyboard",
+    )
+
+    assert app.session_state["setup_speech_active"] is True
+    assert app.session_state["setup_start_mode"] == "spoken"
+    assert 'event.key === "Enter"' in html
+    assert 'event.key === " "' in html
+    assert 'activateUnlock("keyboard")' in html
+    assert "unlock.focus({ preventScroll: true })" in html
+
+
+def test_welcome_completion_advances_and_speaks_next_step_once(monkeypatch):
+    app = onboarding_app(monkeypatch)
+    send_player_event(app, "autoplay-success-2", "autoplay_started")
+
+    send_player_event(app, "welcome-ended-1", "audio_ended")
+
+    assert app.session_state["step"] == 1
+    assert app.session_state["setup_audio_step"] == "vision"
+    assert FakeOpenAI.speech_calls == 2
+
+    app.run(timeout=30)
+
+    assert FakeOpenAI.speech_calls == 2
+
+
+def test_visible_start_preserves_nonspoken_setup_path(monkeypatch):
+    app = onboarding_app(monkeypatch)
+
+    send_player_event(app, "visible-start-1", "start_visible", input_kind="visible_button")
+
+    assert app.session_state["step"] == 1
+    assert app.session_state["setup_start_mode"] == "visual"
+    assert app.session_state["setup_speech_active"] is False
+    assert FakeOpenAI.speech_calls == 1
 
 
 def test_missing_key_error_is_understandable_and_does_not_add_failed_turn(monkeypatch):
