@@ -1,90 +1,46 @@
-"""Spoken-onboarding state helpers and local Streamlit component wrapper."""
+"""Blind-first onboarding data, state helpers, and local speech component."""
 
-import base64
-import hashlib
 from pathlib import Path
-
 import streamlit.components.v1 as components
 
-
-UNLOCK_LABEL = "Access AI. Tap anywhere to begin spoken setup."
-
-SETUP_SPEECH = {
-    "welcome": (
-        "Welcome to Access AI. This setup can be completed without sight. "
-        "Spoken setup is starting now."
-    ),
-    "vision": (
-        "Step one. Choose the vision option that best matches how you want "
-        "Access AI to assist you. Then activate Continue."
-    ),
-    "interaction": (
-        "Step two. Choose voice first, screen reader and keyboard, refreshable "
-        "Braille, large text, or combination. Then activate Continue."
-    ),
-    "device": (
-        "Final step. Choose your device, spoken answer preference, and answer "
-        "style. Then activate Finish setup."
-    ),
+VISION_OPTIONS = {
+    "totally_blind": "Totally blind / no useful vision",
+    "severe_low_vision": "Severe low vision", "low_vision": "Low vision",
+    "sighted_caregiver": "Sighted caregiver", "prefer_not_to_say": "Prefer not to say",
 }
+INTERACTION_OPTIONS = ["Voice first", "Screen reader and touch", "Refreshable Braille", "Large text", "Combination"]
+DEVICE_OPTIONS = ["Android / TalkBack", "iPhone / VoiceOver", "Windows / NVDA", "Windows / JAWS", "Mac / VoiceOver", "Other / Not sure"]
+ANSWER_STYLES = ["Short and direct", "Step-by-step", "Detailed", "Conversational"]
+SETUP_STEPS = ("welcome", "vision", "interaction", "device", "answers", "confirmation")
+SETUP_SPEECH = {
+    "welcome": "Welcome to Access AI. This setup can be completed without sight. To start spoken setup, activate Start spoken setup. If you use TalkBack or VoiceOver, navigate to Start spoken setup and double-tap.",
+    "vision": "First, choose the vision option that best describes how you want Access AI to assist you. Totally blind or no useful vision is recommended for this route.",
+    "interaction": "Choose your primary interaction. Voice first is recommended, but all options remain available.",
+    "device": "Choose your device and screen reader, or choose Other or Not sure.",
+    "answers": "Choose automatic speech, spoken confirmations, and your answer style.",
+    "confirmation": "Review your complete accessibility profile before finishing setup.",
+}
+RECOMMENDED_BLIND_DEFAULTS = {"vision_profile": "totally_blind", "interaction": "Voice first", "auto_speak": True, "spoken_confirmations": True, "detail": "Short and direct"}
 
+def apply_profile_defaults(state, profile):
+    """Apply profile recommendations once; callers may subsequently override them."""
+    state["vision_profile"] = profile
+    if profile == "totally_blind":
+        state.update(RECOMMENDED_BLIND_DEFAULTS)
+
+def profile_summary(state):
+    vision = VISION_OPTIONS.get(state["vision_profile"], "Prefer not to say")
+    speech = "automatic spoken answers" if state["auto_speak"] else "answers not spoken automatically"
+    confirmations = "spoken confirmations" if state["spoken_confirmations"] else "no spoken confirmations"
+    return f"Access AI is set for {vision.lower()}, {state['interaction'].lower()} interaction, {state['platform']}, {speech}, {confirmations}, and {state['detail'].lower()} responses."
+
+def next_step(step):
+    index = SETUP_STEPS.index(step)
+    return SETUP_STEPS[min(index + 1, len(SETUP_STEPS) - 1)]
 
 _COMPONENT_PATH = Path(__file__).parent / "components" / "spoken_setup"
-_spoken_setup_component = components.declare_component(
-    "spoken_setup",
-    path=str(_COMPONENT_PATH),
-)
+_spoken_setup_component = components.declare_component("spoken_setup", path=str(_COMPONENT_PATH))
 
-
-def should_prepare_setup_audio(step_id, attempted_step, enabled=True):
-    """Return true exactly once per setup step while speech is enabled."""
-    return bool(enabled and step_id != attempted_step)
-
-
-def is_new_player_event(event, processed_event_id):
-    return bool(
-        isinstance(event, dict)
-        and event.get("id")
-        and event.get("id") != processed_event_id
-        and event.get("kind")
-    )
-
-
-def player_event_updates(event):
-    """Map a browser player event to small, testable server-state updates."""
-    kind = event.get("kind") if isinstance(event, dict) else None
-    if kind in {"autoplay_started", "audio_unlocked"}:
-        return {
-            "setup_speech_active": True,
-            "setup_autoplay_blocked": False,
-        }
-    if kind == "autoplay_blocked":
-        return {"setup_autoplay_blocked": True}
-    if kind == "start_visible":
-        return {
-            "setup_speech_active": False,
-            "setup_autoplay_blocked": False,
-            "advance_visual": True,
-        }
-    if kind == "audio_ended" and event.get("step") == "welcome":
-        return {"advance_spoken": True}
-    return {}
-
-
-def spoken_setup_player(audio_bytes, step_id, *, first_screen):
-    """Render the stable browser audio player and return its latest event."""
-    audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
-    audio_digest = hashlib.sha256(audio_bytes).hexdigest()[:16]
-    audio_mime = "audio/wav" if audio_bytes.startswith(b"RIFF") else "audio/mpeg"
-    return _spoken_setup_component(
-        audio_b64=audio_b64,
-        audio_mime=audio_mime,
-        audio_token=f"{step_id}:{audio_digest}",
-        step_id=step_id,
-        first_screen=first_screen,
-        unlock_label=UNLOCK_LABEL,
-        visible_start_label="Start accessible setup",
-        default=None,
-        key="spoken_setup_player",
-        tab_index=0,
-    )
+def spoken_setup_player(text, step_id, *, speak):
+    """Offer best-effort browser speech; semantic page text remains authoritative."""
+    return _spoken_setup_component(speech_text=text, speech_token=step_id, speak=bool(speak), repeat_label="Repeat this setup instruction", default=None, key=f"spoken_setup_player_{step_id}", tab_index=0)

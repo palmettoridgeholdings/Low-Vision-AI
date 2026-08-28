@@ -8,10 +8,15 @@ import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
 from onboarding import (
+    ANSWER_STYLES,
+    DEVICE_OPTIONS,
+    INTERACTION_OPTIONS,
+    SETUP_STEPS,
     SETUP_SPEECH,
-    is_new_player_event,
-    player_event_updates,
-    should_prepare_setup_audio,
+    VISION_OPTIONS,
+    apply_profile_defaults,
+    next_step,
+    profile_summary,
     spoken_setup_player,
 )
 
@@ -56,29 +61,26 @@ st.markdown(
 
 defaults = {
     "onboarded": False,
-    "step": 0,
+    "step": "welcome",
     "messages": [],
-    "vision": "Blind",
+    "vision_profile": "prefer_not_to_say",
     "interaction": "Voice first",
     "platform": "Android / TalkBack",
     "detail": "Step-by-step",
     "web_search": True,
     "auto_speak": True,
+    "spoken_confirmations": True,
     "voice": "cedar",
     "last_audio": None,
     "last_transcript": "",
     "processed_audio_id": None,
-    "setup_audio": None,
-    "setup_audio_step": None,
-    "setup_audio_attempted_step": None,
-    "setup_audio_error": None,
-    "setup_speech_active": False,
-    "setup_autoplay_blocked": False,
-    "setup_component_event_id": None,
     "setup_start_mode": None,
     "camera_answer": None,
     "last_audio_text": "",
     "voice_notice": None,
+    "show_help": False,
+    "local_speech_text": None,
+    "local_speech_token": 0,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -86,7 +88,7 @@ for k, v in defaults.items():
 
 if (
     st.session_state.interaction == "Large text"
-    or "low vision" in st.session_state.vision.lower()
+    or st.session_state.vision_profile in {"low_vision", "severe_low_vision"}
 ):
     st.markdown(
         """
@@ -169,7 +171,7 @@ def instructions():
     return base + f"""
 
 CURRENT ACCESSIBILITY PROFILE
-Vision: {st.session_state.vision}
+Vision: {VISION_OPTIONS[st.session_state.vision_profile]}
 Primary interaction: {st.session_state.interaction}
 Platform or screen reader: {st.session_state.platform}
 Preferred answer style: {st.session_state.detail}
@@ -291,81 +293,29 @@ Accuracy and explicit uncertainty matter more than confidence.
     return r.output_text
 
 
-def clear_setup_audio(*, reset_attempt=False):
-    st.session_state.setup_audio = None
-    st.session_state.setup_audio_step = None
-    st.session_state.setup_audio_error = None
-    if reset_attempt:
-        st.session_state.setup_audio_attempted_step = None
-
-
 def apply_auto_speak_change():
     if not st.session_state.auto_speak:
         st.session_state.last_audio = None
         st.session_state.voice_notice = None
 
 
-def prepare_setup_audio(step_id, *, enabled):
-    if not should_prepare_setup_audio(
+def render_setup_instruction(step_id):
+    """Render authoritative text plus optional, API-free browser speech."""
+    st.write(SETUP_SPEECH[step_id])
+    spoken_setup_player(
+        SETUP_SPEECH[step_id],
         step_id,
-        st.session_state.setup_audio_attempted_step,
-        enabled,
-    ):
-        return
-
-    st.session_state.setup_audio_attempted_step = step_id
-    try:
-        with st.spinner("Preparing spoken setup instructions…"):
-            st.session_state.setup_audio = speech(SETUP_SPEECH[step_id])
-        st.session_state.setup_audio_step = step_id
-        st.session_state.setup_audio_error = None
-    except Exception as error:
-        st.session_state.setup_audio = None
-        st.session_state.setup_audio_step = None
-        st.session_state.setup_audio_error = capability_error("Spoken setup", error)
-
-
-def process_setup_player_event(event):
-    if not is_new_player_event(event, st.session_state.setup_component_event_id):
-        return None
-
-    st.session_state.setup_component_event_id = event["id"]
-    updates = player_event_updates(event)
-    for key in ("setup_speech_active", "setup_autoplay_blocked"):
-        if key in updates:
-            st.session_state[key] = updates[key]
-
-    if event["kind"] in {"autoplay_started", "audio_unlocked"}:
-        st.session_state.setup_start_mode = "spoken"
-    elif event["kind"] == "start_visible":
-        st.session_state.setup_start_mode = "visual"
-
-    if updates.get("advance_visual") or updates.get("advance_spoken"):
-        return "advance"
-    return None
-
-
-def render_setup_player(step_id, *, first_screen, show_error=True):
-    speech_enabled = bool(api_key()) and (
-        first_screen or st.session_state.setup_speech_active
+        speak=(st.session_state.setup_start_mode == "spoken"),
     )
-    prepare_setup_audio(step_id, enabled=speech_enabled)
 
-    if show_error and st.session_state.setup_audio_error:
-        st.warning(st.session_state.setup_audio_error)
 
-    if (
-        st.session_state.setup_audio_step != step_id
-        or st.session_state.setup_audio is None
-    ):
-        return None
+def choose_vision_profile():
+    apply_profile_defaults(st.session_state, st.session_state.vision_profile)
 
-    event = spoken_setup_player(
-        st.session_state.setup_audio,
-        step_id,
-        first_screen=first_screen,
-    )
-    return process_setup_player_event(event)
+
+def go_to_setup_step(step):
+    st.session_state.step = step
+    st.rerun()
 
 
 def prepare_camera_speech(answer):
@@ -387,99 +337,81 @@ def prepare_camera_speech(answer):
 # -------------------------
 if not st.session_state.onboarded:
     step = st.session_state.step
-    api_available_for_setup = bool(api_key())
-
-    if step == 0:
-        action = render_setup_player("welcome", first_screen=True, show_error=False)
-        if action == "advance":
-            st.session_state.step = 1
-            clear_setup_audio()
-            st.rerun()
-
-        if not api_available_for_setup or st.session_state.setup_audio_error:
-            st.title("🔊 Welcome to Access AI")
-            st.write("This setup is designed to be completed without sight.")
-            if st.session_state.setup_audio_error:
-                st.warning(st.session_state.setup_audio_error)
-            if not api_available_for_setup:
-                st.info(
-                    "Spoken setup is unavailable until an OpenAI API key is "
-                    "configured. All setup questions remain available as text and "
-                    "work with a screen reader."
-                )
-            if st.button("Start accessible setup", type="primary"):
-                st.session_state.setup_start_mode = "visual"
-                st.session_state.step = 1
-                clear_setup_audio()
-                st.rerun()
-        st.stop()
+    if step not in SETUP_STEPS:
+        st.session_state.step = "welcome"
+        step = "welcome"
 
     st.title("🔊 Welcome to Access AI")
-    st.write("This setup is designed to be completed without sight.")
 
-    if step == 1:
-        st.header("1 of 3 — Vision")
-        render_setup_player("vision", first_screen=False)
-        st.radio(
-            "Vision preference",
-            ["Blind", "Severe low vision", "Low vision", "Sighted caregiver", "Prefer not to say"],
-            key="vision",
-        )
-        if st.button("Continue", type="primary"):
-            st.session_state.step = 2
-            clear_setup_audio()
-            st.rerun()
+    if step == "welcome":
+        st.write(SETUP_SPEECH["welcome"])
+        if st.button("Start spoken setup", type="primary"):
+            st.session_state.setup_start_mode = "spoken"
+            apply_profile_defaults(st.session_state, "totally_blind")
+            go_to_setup_step("vision")
+        if st.button("Start visual guided setup"):
+            st.session_state.setup_start_mode = "visual"
+            go_to_setup_step("vision")
         st.stop()
 
-    if step == 2:
-        st.header("2 of 3 — Interaction")
-        render_setup_player("interaction", first_screen=False)
+    if step == "vision":
+        st.header("1 of 5 — Vision")
+        render_setup_instruction("vision")
         st.radio(
-            "Primary interaction preference",
-            [
-                "Voice first",
-                "Screen reader and keyboard",
-                "Refreshable Braille display",
-                "Large text",
-                "Combination",
-            ],
-            key="interaction",
+            "Vision option",
+            list(VISION_OPTIONS),
+            format_func=VISION_OPTIONS.get,
+            key="vision_profile",
+            on_change=choose_vision_profile,
         )
         if st.button("Continue", type="primary"):
-            st.session_state.step = 3
-            clear_setup_audio()
-            st.rerun()
+            go_to_setup_step(next_step(step))
+        if st.button("Back to setup choices"):
+            go_to_setup_step("welcome")
         st.stop()
 
-    st.header("3 of 3 — Device and answers")
-    render_setup_player("device", first_screen=False)
-    st.selectbox(
-        "Platform or screen reader",
-        [
-            "Android / TalkBack",
-            "iPhone / VoiceOver",
-            "Windows / NVDA",
-            "Windows / JAWS",
-            "Mac / VoiceOver",
-            "Other / Not sure",
-        ],
-        key="platform",
-    )
-    st.checkbox(
-        "Automatically speak answers",
-        key="auto_speak",
-        on_change=apply_auto_speak_change,
-    )
-    st.selectbox(
-        "Answer style",
-        ["Step-by-step", "Short and direct", "Detailed", "Conversational"],
-        key="detail",
-    )
+    if step == "interaction":
+        st.header("2 of 5 — Interaction")
+        render_setup_instruction("interaction")
+        st.radio("Primary interaction preference", INTERACTION_OPTIONS, key="interaction")
+        if st.button("Continue", type="primary"):
+            go_to_setup_step(next_step(step))
+        if st.button("Back"):
+            go_to_setup_step("vision")
+        st.stop()
 
-    if st.button("Finish setup and open Access AI", type="primary"):
+    if step == "device":
+        st.header("3 of 5 — Device")
+        render_setup_instruction("device")
+        st.radio("Device or screen reader", DEVICE_OPTIONS, key="platform")
+        if st.button("Continue", type="primary"):
+            go_to_setup_step(next_step(step))
+        if st.button("Back"):
+            go_to_setup_step("interaction")
+        st.stop()
+
+    if step == "answers":
+        st.header("4 of 5 — Answer behavior")
+        render_setup_instruction("answers")
+        st.checkbox("Automatically speak answers", key="auto_speak", on_change=apply_auto_speak_change)
+        st.checkbox("Spoken confirmations", key="spoken_confirmations")
+        st.radio("Answer style", ANSWER_STYLES, key="detail")
+        if st.button("Continue", type="primary"):
+            go_to_setup_step(next_step(step))
+        if st.button("Back"):
+            go_to_setup_step("device")
+        st.stop()
+
+    st.header("5 of 5 — Confirm accessibility setup")
+    render_setup_instruction("confirmation")
+    st.info(profile_summary(st.session_state))
+    if st.button("Finish setup", type="primary"):
         st.session_state.onboarded = True
-        clear_setup_audio()
         st.rerun()
+    if st.button("Review settings"):
+        go_to_setup_step("vision")
+    if st.button("Back"):
+        go_to_setup_step("answers")
     st.stop()
 
 
@@ -495,46 +427,68 @@ if not api_available:
         "until an OpenAI API key is configured. Setup and preferences still work."
     )
 
-if st.session_state.vision == "Blind":
+if st.session_state.vision_profile == "totally_blind":
     st.info(
-        "Voice-first mode is active. With TalkBack, swipe through controls and "
-        "double-tap anywhere to activate the focused control."
+        "Totally blind mode is active. Use your screen reader's standard navigation "
+        "and activation gestures; Access AI does not replace them."
     )
-elif "low vision" in st.session_state.vision.lower():
+elif st.session_state.vision_profile in {"low_vision", "severe_low_vision"}:
     st.info("Low-vision mode is active. Controls are large and spoken answers are available.")
+
+action_one, action_two, action_three = st.columns(3)
+with action_one:
+    if st.button("Repeat last answer"):
+        if st.session_state.last_audio_text:
+            st.session_state.local_speech_text = st.session_state.last_audio_text
+            st.session_state.local_speech_token += 1
+        else:
+            st.session_state.voice_notice = "There is no answer to repeat yet."
+with action_two:
+    if st.button("Help / What can I do?"):
+        st.session_state.show_help = not st.session_state.show_help
+with action_three:
+    if st.button("Change accessibility setup"):
+        st.session_state.onboarded = False
+        st.session_state.step = "vision"
+        st.rerun()
+
+if st.session_state.show_help:
+    help_text = (
+        "On this screen you can ask by voice, type or use a Braille keyboard, take a "
+        "picture for assistance, repeat the last answer, or change accessibility setup."
+    )
+    st.info(help_text)
+    if st.session_state.spoken_confirmations:
+        spoken_setup_player(help_text, f"help-{st.session_state.local_speech_token}", speak=True)
+
+if st.session_state.local_speech_text:
+    spoken_setup_player(
+        st.session_state.local_speech_text,
+        f"answer-{st.session_state.local_speech_token}",
+        speak=True,
+    )
 
 with st.expander("Accessibility and voice preferences"):
     st.selectbox(
         "Vision",
-        ["Blind", "Severe low vision", "Low vision", "Sighted caregiver", "Prefer not to say"],
-        key="vision",
+        list(VISION_OPTIONS),
+        format_func=VISION_OPTIONS.get,
+        key="vision_profile",
+        on_change=choose_vision_profile,
     )
     st.selectbox(
         "Primary interaction",
-        [
-            "Voice first",
-            "Screen reader and keyboard",
-            "Refreshable Braille display",
-            "Large text",
-            "Combination",
-        ],
+        INTERACTION_OPTIONS,
         key="interaction",
     )
     st.selectbox(
         "Platform or screen reader",
-        [
-            "Android / TalkBack",
-            "iPhone / VoiceOver",
-            "Windows / NVDA",
-            "Windows / JAWS",
-            "Mac / VoiceOver",
-            "Other / Not sure",
-        ],
+        DEVICE_OPTIONS,
         key="platform",
     )
     st.selectbox(
         "Answer style",
-        ["Step-by-step", "Short and direct", "Detailed", "Conversational"],
+        ANSWER_STYLES,
         key="detail",
     )
     st.checkbox("Allow web research when useful", key="web_search")
@@ -543,6 +497,7 @@ with st.expander("Accessibility and voice preferences"):
         key="auto_speak",
         on_change=apply_auto_speak_change,
     )
+    st.checkbox("Spoken confirmations", key="spoken_confirmations")
     st.selectbox(
         "AI voice",
         ["cedar", "marin", "coral", "alloy", "ash", "nova", "sage", "shimmer", "verse", "onyx"],
@@ -551,12 +506,8 @@ with st.expander("Accessibility and voice preferences"):
 
     if st.button("Run accessible setup again"):
         st.session_state.onboarded = False
-        st.session_state.step = 0
-        st.session_state.setup_speech_active = False
-        st.session_state.setup_autoplay_blocked = False
-        st.session_state.setup_component_event_id = None
+        st.session_state.step = "welcome"
         st.session_state.setup_start_mode = None
-        clear_setup_audio(reset_attempt=True)
         st.rerun()
 
 
