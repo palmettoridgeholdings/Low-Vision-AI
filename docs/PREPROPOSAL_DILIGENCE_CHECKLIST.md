@@ -23,7 +23,7 @@ Do not send a new external Access AI proposal until all RED items are resolved a
 
 ## YELLOW — professional polish
 
-- [ ] Rewrite generic landing-page copy where it reads like template/AI filler.
+- [x] Rewrite generic landing-page copy where it reads like template/AI filler.
 - [x] Add a concise Technical Progress / Project Status section with concrete engineering facts.
 - [x] Clearly label the Streamlit application as a proof of concept.
 - [x] Clearly identify native Android as the primary mobile development path.
@@ -31,7 +31,7 @@ Do not send a new external Access AI proposal until all RED items are resolved a
 - [ ] Visually inspect all four PDF pages for spacing, table, line-break, and accessibility issues.
 - [x] Remove or rewrite Mentra-specific language that is no longer appropriate for general outreach.
 - [ ] Review page hierarchy, navigation, focus behavior, mobile layout, contrast, and zoom/reflow.
-- [ ] Check title, description, Open Graph metadata, favicon, robots, canonical, and sitemap.
+- [x] Check title, description, Open Graph metadata, favicon, robots, canonical, and sitemap in the replacement package; repeat after deployment.
 - [x] Add appropriate organization/project ownership wording: Palmetto Ridge Holdings LLC / Palmetto Ridge Media Group.
 
 ## CODE / REPOSITORY DILIGENCE

@@ -64,9 +64,10 @@ conformance assessment.
 ## Manual or separate review still required
 
 - **Legal review and publication:** Counsel should review the Privacy Policy and
-  Terms. The public website, HTTPS behavior, footer links, canonical URL, sitemap,
-  Google Analytics configuration, and published contact links are outside this
-  repository and were not verified here.
+  Terms. A replacement static website package now exists under
+  `website/access-ai-tech/`, but live HTTPS behavior, deployed footer links,
+  canonical URL, sitemap, analytics state, and contact links remain unverified
+  until deployment.
 - **Provider configuration:** Confirm the production OpenAI project’s data controls,
   logging configuration, model access, billing limits, and incident procedures.
   `store=False` reduces Responses API application-state storage but does not prevent

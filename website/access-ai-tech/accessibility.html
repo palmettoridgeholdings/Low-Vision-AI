@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accessibility Statement — Access AI</title>
+  <meta name="description" content="Access AI's accessibility goals, current development status, testing limits, and feedback contact.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://access-ai.tech/accessibility.html">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+  <meta property="og:title" content="Accessibility Statement — Access AI">
+  <meta property="og:description" content="Access AI's accessibility goals, current development status, testing limits, and feedback contact.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://access-ai.tech/accessibility.html">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header"><div class="header-inner">
+    <a class="brand" href="index.html" aria-label="Access AI home">Access <span>AI</span></a>
+    <nav class="site-nav" aria-label="Primary navigation"><ul>
+      <li><a href="index.html#status">Project status</a></li>
+      <li><a href="smart-glasses-poc.html">Smart Glasses POC</a></li>
+      <li><a href="accessibility.html" aria-current="page">Accessibility</a></li>
+      <li><a href="mailto:founder@access-ai.tech">Contact</a></li>
+    </ul></nav>
+  </div></header>
+
+  <main id="main" class="wrap legal">
+    <p class="eyebrow">Access AI policies</p>
+    <h1>Accessibility Statement</h1>
+    <p class="meta"><strong>Updated:</strong> September 5, 2026</p>
+    <p>Accessibility is the core purpose of Access AI. The project is being designed for blind and low-vision users first, with attention to screen readers, spoken interaction, Braille-compatible text entry, large controls, high contrast, and nonvisual descriptions.</p>
+
+    <h2>Current status</h2>
+    <p>Access AI is under active development. The public Streamlit application is a proof of concept for text, voice, camera, and accessibility concepts. Native Android is the primary mobile development direction so platform accessibility behavior can be implemented and physically tested.</p>
+    <p class="notice">This statement describes goals, current code, and known limitations. It is not a claim of formal WCAG, ADA, or other accessibility conformance.</p>
+
+    <h2>Website accessibility</h2>
+    <p>This static website package uses semantic landmarks and headings, a skip link, keyboard-visible focus, readable high-contrast colors, responsive layouts, and links with large activation areas. Real-world browser, zoom, screen-reader, forced-color, and mobile testing is still required after deployment.</p>
+
+    <h2>Product accessibility goals</h2>
+    <ul class="plain-list">
+      <li>Complete onboarding without sighted assistance.</li>
+      <li>Support Android TalkBack and standard screen-reader gestures.</li>
+      <li>Provide clear control labels and logical focus order.</li>
+      <li>Support spoken setup and spoken answers when enabled.</li>
+      <li>Keep text input compatible with software keyboards and Braille input services.</li>
+      <li>Use large touch targets and readable high-contrast presentation.</li>
+      <li>Avoid essential tasks that depend only on color, imagery, drag gestures, or custom swipe gestures.</li>
+      <li>Use relative position, clock-face references, landmarks, and explicit uncertainty for nonvisual spatial descriptions when supported by the available image.</li>
+    </ul>
+
+    <h2>Testing</h2>
+    <p>Automated accessibility checks are useful but are not proof of real-world usability. The repository uses code review and automated tests. Physical-device and assistive-technology checks remain required, including TalkBack testing before accessibility-sensitive Android milestones are considered complete.</p>
+    <p>The Streamlit proof of concept has browser and framework limitations. Its behavior should not be interpreted as the final native Android accessibility experience.</p>
+
+    <h2>Known limitations</h2>
+    <ul class="plain-list">
+      <li>Browser-dependent speech and focus behavior in the Streamlit proof of concept.</li>
+      <li>Differences among screen readers, Android devices, speech engines, browsers, and Braille input services.</li>
+      <li>AI output that can be incomplete or inaccurate.</li>
+      <li>Features that depend on network, camera, microphone, or third-party AI availability.</li>
+      <li>Native Android camera, production voice recognition, and smart-glasses functions that remain development milestones rather than released capabilities.</li>
+    </ul>
+
+    <h2>Feedback</h2>
+    <p>Accessibility feedback is welcome, including reports about labels, focus order, speech behavior, keyboard or Braille input, contrast, text scaling, and mobile usability.</p>
+    <p>Email <a href="mailto:founder@access-ai.tech">founder@access-ai.tech</a>. When possible, include the device, operating system, assistive technology, and the action you were trying to complete.</p>
+
+    <h2>Commitment</h2>
+    <p>Access AI will not claim formal accessibility conformance solely on the basis of automated testing. Public claims will remain proportional to the testing completed, and known limitations will be documented.</p>
+  </main>
+
+  <footer class="site-footer"><div class="wrap footer-inner">
+    <div class="footer-copy"><a class="brand" href="index.html">Access <span>AI</span></a><p>Accessibility-focused assistive AI research.</p></div>
+    <nav aria-label="Footer navigation"><ul class="footer-links">
+      <li><a href="privacy.html">Privacy Policy</a></li>
+      <li><a href="terms.html">Terms of Use</a></li>
+      <li><a href="accessibility.html" aria-current="page">Accessibility Statement</a></li>
+      <li><a href="smart-glasses-poc.html">Smart Glasses POC</a></li>
+      <li><a href="mailto:founder@access-ai.tech">Contact</a></li>
+    </ul></nav>
+  </div></footer>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Access AI — Accessibility-first assistive AI</title>
+  <meta name="description" content="Access AI is an accessibility-focused assistive AI project with a working Streamlit proof of concept, native Android development, and a vendor-neutral smart-glasses design.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://access-ai.tech/">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+  <meta property="og:title" content="Access AI">
+  <meta property="og:description" content="Accessibility-first assistive AI research, with current work and future milestones clearly separated.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://access-ai.tech/">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="Access AI home">Access <span>AI</span></a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <ul>
+          <li><a href="#status">Project status</a></li>
+          <li><a href="smart-glasses-poc.html">Smart Glasses POC</a></li>
+          <li><a href="accessibility.html">Accessibility</a></li>
+          <li><a href="mailto:founder@access-ai.tech">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">Accessibility-focused research and development</p>
+          <h1>Practical AI assistance, designed around nonvisual use.</h1>
+          <p class="lede">Access AI explores how text, voice, and user-triggered camera input can make everyday information easier to interpret for blind and low-vision users.</p>
+          <div class="actions">
+            <a class="button" href="#status">Review project status</a>
+            <a class="button secondary" href="smart-glasses-poc.html">Smart Glasses POC</a>
+          </div>
+        </div>
+        <aside class="hero-note" aria-label="Important project limitation">
+          <strong>Development-stage assistive software.</strong>
+          Access AI is not a navigation, emergency, medical, legal, financial, or safety system. Important information should be verified with an appropriate trusted source.
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="status">
+      <div class="wrap">
+        <p class="eyebrow">Project status</p>
+        <h2>What works now, what is being built, and what is planned</h2>
+        <p class="section-intro">The project has three distinct tracks. They share accessibility and safety principles, but they are not equally mature and are not presented as finished products.</p>
+        <div class="status-grid">
+          <article class="card">
+            <p class="status-label now">Working proof of concept</p>
+            <h3>Streamlit prototype</h3>
+            <p>A browser-based prototype supports typed or Braille-keyboard questions, recorded voice questions, generated spoken answers, and user-triggered still-image tasks for reading, scene description, and object inspection.</p>
+            <p>Preferences and conversation content remain in the current Streamlit session rather than a durable user account.</p>
+          </article>
+          <article class="card">
+            <p class="status-label building">In development</p>
+            <h3>Native Android</h3>
+            <p>Android is the primary mobile direction. The current milestone focuses on blind-first onboarding, Android semantics, platform text-to-speech, and local accessibility preferences.</p>
+            <p>Production AI answers, camera capture, and voice recognition are not connected in that milestone.</p>
+          </article>
+          <article class="card">
+            <p class="status-label planned">Design only</p>
+            <h3>Smart glasses</h3>
+            <p>A vendor-neutral design proposes selective still-frame capture, a phone or controlled backend relay, and concise audio or text output.</p>
+            <p>No glasses SDK, continuous video service, obstacle avoidance, or navigation capability is implemented.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="technical-status">
+      <div class="wrap">
+        <p class="eyebrow">Technical progress</p>
+        <h2>Concrete implementation facts</h2>
+        <div class="fact-grid">
+          <article class="card">
+            <span class="fact-number" aria-hidden="true">01</span>
+            <h3>Accessible setup paths</h3>
+            <p>The Streamlit prototype exposes separate spoken and visual setup routes. Fixed setup prompts use browser speech synthesis and retain equivalent semantic text.</p>
+          </article>
+          <article class="card">
+            <span class="fact-number" aria-hidden="true">02</span>
+            <h3>Explicit data boundaries</h3>
+            <p>OpenAI-powered requests use a server-side credential. Responses API application-state storage is disabled in the prototype, while provider processing and limited logs may still apply.</p>
+          </article>
+          <article class="card">
+            <span class="fact-number" aria-hidden="true">03</span>
+            <h3>Regression coverage</h3>
+            <p>Offline application-harness tests cover onboarding routes, accessibility defaults, same-session behavior, missing-key handling, primary controls, and response-storage settings.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="principles">
+      <div class="wrap callout">
+        <div>
+          <p class="eyebrow">Design boundary</p>
+          <h2>Useful assistance without overstating certainty</h2>
+          <p>Visual answers prioritize legible text, practical spatial relationships, nonvisual landmarks, and explicit uncertainty. A single camera image is never represented as proof that a route or environment is safe.</p>
+        </div>
+        <div>
+          <ul class="plain-list">
+            <li>No long-lived provider key in a mobile or glasses client.</li>
+            <li>No continuous camera capture in the proposed first glasses milestone.</li>
+            <li>No formal accessibility-conformance claim without physical testing.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="contact">
+      <div class="wrap">
+        <p class="eyebrow">Contact</p>
+        <h2>Technical, accessibility, and proposal questions</h2>
+        <p class="section-intro">Access AI is developed by Palmetto Ridge Holdings LLC, operating through Palmetto Ridge Media Group.</p>
+        <a class="button" href="mailto:founder@access-ai.tech">Email founder@access-ai.tech</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <div class="footer-copy">
+        <a class="brand" href="index.html">Access <span>AI</span></a>
+        <p>Accessibility-focused assistive AI research.</p>
+      </div>
+      <nav aria-label="Footer navigation">
+        <ul class="footer-links">
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms of Use</a></li>
+          <li><a href="accessibility.html">Accessibility Statement</a></li>
+          <li><a href="smart-glasses-poc.html">Smart Glasses POC</a></li>
+          <li><a href="mailto:founder@access-ai.tech">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

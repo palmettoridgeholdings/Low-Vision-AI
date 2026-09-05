@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Glasses Proof of Concept — Access AI</title>
+  <meta name="description" content="A vendor-neutral, privacy-conscious design draft for selective-frame smart-glasses integration with Access AI.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://access-ai.tech/smart-glasses-poc.html">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+  <meta property="og:title" content="Smart Glasses Proof of Concept — Access AI">
+  <meta property="og:description" content="A vendor-neutral, privacy-conscious design for selective-frame smart-glasses integration.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://access-ai.tech/smart-glasses-poc.html">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header"><div class="header-inner">
+    <a class="brand" href="index.html" aria-label="Access AI home">Access <span>AI</span></a>
+    <nav class="site-nav" aria-label="Primary navigation"><ul>
+      <li><a href="index.html#status">Project status</a></li>
+      <li><a href="smart-glasses-poc.html" aria-current="page">Smart Glasses POC</a></li>
+      <li><a href="accessibility.html">Accessibility</a></li>
+      <li><a href="mailto:founder@access-ai.tech">Contact</a></li>
+    </ul></nav>
+  </div></header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">Design draft · not implemented</p>
+          <h1>Smart Glasses Proof of Concept</h1>
+          <p class="lede">A vendor-neutral path for adding selective, user-triggered camera assistance after the native Android foundation is ready.</p>
+        </div>
+        <aside class="hero-note" aria-label="Proof-of-concept status">
+          <strong>Current status:</strong> architecture and content design only. Access AI does not currently include a smart-glasses SDK, continuous capture, navigation, or obstacle avoidance.
+        </aside>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <p class="eyebrow">Starting point</p>
+        <h2>Build from the phone, not around a hardware vendor</h2>
+        <p class="section-intro">Native Android is the primary mobile direction. A future glasses client should remain thin: capture only when requested, send a bounded request through a phone or controlled backend, and return concise speech or text.</p>
+        <div class="status-grid">
+          <article class="card">
+            <p class="status-label now">Available baseline</p>
+            <h3>Streamlit prototype</h3>
+            <p>Demonstrates request handling for text, recorded audio, user-triggered still images, and spoken answers. It is not a glasses service or final mobile architecture.</p>
+          </article>
+          <article class="card">
+            <p class="status-label building">Primary development path</p>
+            <h3>Native Android</h3>
+            <p>Establishes platform accessibility, on-device preferences, and a phone-based control surface before hardware integration is attempted.</p>
+          </article>
+          <article class="card">
+            <p class="status-label planned">Future adapter</p>
+            <h3>Smart glasses</h3>
+            <p>Add one vendor adapter at the edge only after its SDK, privacy behavior, accessibility, and operating cost are evaluated.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <p class="eyebrow">Selective-frame flow</p>
+        <h2>Capture less, answer the task, then stop</h2>
+        <div class="principle-grid">
+          <article class="card"><span class="fact-number" aria-hidden="true">1</span><h3>User initiates capture</h3><p>An explicit control starts one still-frame request. Audible or tactile feedback confirms capture and processing.</p></article>
+          <article class="card"><span class="fact-number" aria-hidden="true">2</span><h3>Phone or backend relays</h3><p>The relay owns provider credentials, permission handling, resizing, timeouts, cancellation, and bounded retries.</p></article>
+          <article class="card"><span class="fact-number" aria-hidden="true">3</span><h3>Concise result returns</h3><p>The user receives speech, captions, or phone text with explicit uncertainty. The capture is not retained by default.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap callout">
+        <div>
+          <p class="eyebrow">Cost and privacy boundaries</p>
+          <h2>A narrow first milestone</h2>
+          <p>Selective frames reduce network traffic, provider usage, battery demand, and unnecessary capture compared with continuous video. Images should be resized to the minimum useful resolution for the task, and high-detail processing should be reserved for reading or close inspection.</p>
+        </div>
+        <div>
+          <ul class="plain-list">
+            <li>No long-lived OpenAI key on glasses or in a mobile APK.</li>
+            <li>No background or continuous capture in the proposed first version.</li>
+            <li>No persistent capture archive by default.</li>
+            <li>No claim of safe navigation from a single camera response.</li>
+            <li>Every glasses action should have a phone and screen-reader equivalent.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <p class="eyebrow">Proposed sequence</p>
+        <h2>Implementation gates</h2>
+        <ol class="plain-list">
+          <li>Validate native Android onboarding, preferences, and accessibility on physical devices.</li>
+          <li>Extract provider-independent request and response contracts without changing the working Streamlit flow.</li>
+          <li>Test a local fake-device adapter with text and fixture images.</li>
+          <li>Add an authenticated phone or backend relay with cancellation, timeouts, and deduplication.</li>
+          <li>Evaluate one hardware adapter behind a feature flag.</li>
+          <li>Conduct privacy, safety, accessibility, and usability testing before broader availability.</li>
+        </ol>
+        <div class="actions"><a class="button" href="mailto:founder@access-ai.tech">Discuss the technical direction</a><a class="button secondary" href="index.html#status">Return to project status</a></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="wrap footer-inner">
+    <div class="footer-copy"><a class="brand" href="index.html">Access <span>AI</span></a><p>Accessibility-focused assistive AI research.</p></div>
+    <nav aria-label="Footer navigation"><ul class="footer-links">
+      <li><a href="privacy.html">Privacy Policy</a></li>
+      <li><a href="terms.html">Terms of Use</a></li>
+      <li><a href="accessibility.html">Accessibility Statement</a></li>
+      <li><a href="smart-glasses-poc.html" aria-current="page">Smart Glasses POC</a></li>
+      <li><a href="mailto:founder@access-ai.tech">Contact</a></li>
+    </ul></nav>
+  </div></footer>
+</body>
+</html>
