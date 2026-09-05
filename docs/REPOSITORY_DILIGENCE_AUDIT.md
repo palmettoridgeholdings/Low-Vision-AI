@@ -4,7 +4,7 @@
 
 **Branch:** `codex/preproposal-diligence-cleanup`
 
-**Scope:** All tracked files, all 46 reachable Git commits, local generated Android
+**Scope:** All tracked files, all reachable Git history, local generated Android
 artifacts, and the isolated native Android milestone at commit `f60e714`.
 
 This is a technical repository audit, not legal advice or an accessibility
@@ -40,6 +40,21 @@ conformance assessment.
 8. **Vendor-specific Mentra references remained in a design-only document.** They
    were replaced with vendor-neutral adapter language. No smart-glasses feature is
    represented as implemented.
+9. **The public website and legal pages had not been operationally verified.** The
+   replacement package is now deployed at `https://access-ai.tech/`; the Privacy
+   Policy, Terms of Use, Accessibility Statement, canonical URLs, sitemap, robots
+   file, internal links, contact links, and HTTPS behavior were verified publicly.
+   The pre-existing GA4 property `G-E4TE8BSQBV` is preserved and disclosed.
+10. **The public Smart Glasses PDF was stale.** A refreshed, vendor-neutral,
+    four-page PDF is now deployed and included in the repository's public-site
+    package. Its SHA-256 is
+    `f61f5934ba8657bca9f7df2efd464fbb0904874911af154ae439d3ca3d7fd086`.
+    Visual inspection found no clipping, overlap, or unreadable content. Text-layer
+    inspection extracts gates 1–6 once each, in number-then-heading order, without
+    the suspected duplicate headings.
+11. **The repository had no explicit license.** The root `LICENSE` now records the
+    approved proprietary, all-rights-reserved position for Palmetto Ridge Holdings
+    LLC while preserving the independent licenses of third-party dependencies.
 
 ## Findings that did not require a code change
 
@@ -63,11 +78,9 @@ conformance assessment.
 
 ## Manual or separate review still required
 
-- **Legal review and publication:** Counsel should review the Privacy Policy and
-  Terms. A replacement static website package now exists under
-  `website/access-ai-tech/`, but live HTTPS behavior, deployed footer links,
-  canonical URL, sitemap, analytics state, and contact links remain unverified
-  until deployment.
+- **Legal review:** The Privacy Policy, Terms, and Accessibility Statement are
+  published and operationally verified. Counsel should still review them; this
+  technical diligence pass is not legal advice.
 - **Provider configuration:** Confirm the production OpenAI project’s data controls,
   logging configuration, model access, billing limits, and incident procedures.
   `store=False` reduces Responses API application-state storage but does not prevent
@@ -83,20 +96,22 @@ conformance assessment.
   wrapper, so Android tasks cannot run here. Build, JVM tests, lint, instrumented
   accessibility checks, signing configuration, and APK inspection belong on the
   isolated Android branch.
-- **Licensing:** The repository has no `LICENSE` file. Ownership language exists in
-  the Terms, but the owner must choose and approve a source-code license or an
-  explicit proprietary notice before external distribution.
-- **Operational validation:** Run a clean deployment smoke test and one deliberately
-  non-sensitive live request for text, image, transcription, speech, and optional
-  web search. Confirm temporary-file cleanup and redacted production logging.
+- **Operational validation:** The public static-site deployment and clean
+  desktop/mobile smoke checks are complete. A deliberately non-sensitive live
+  Streamlit request for text, image, transcription, speech, and optional web search
+  remains outstanding; confirm temporary-file cleanup and redacted production
+  logging when the prototype is independently verified awake.
 
 ## Verification results
 
-- `python -m pytest -q -p no:cacheprovider`: **15 passed in 6.28s**.
-- `python -m py_compile app.py onboarding.py tests/fake_openai.py tests/test_app_smoke.py`: **passed**.
+- `python -m pytest -q -p no:cacheprovider`: **24 passed in 6.31s** during closeout. A Windows temporary-directory cleanup warning appeared after the passing run and did not change the zero exit status.
+- `python -m pytest tests/test_website_static.py -q -p no:cacheprovider`: **9 passed in 0.07s**.
+- `python -m py_compile app.py onboarding.py tests/fake_openai.py tests/test_app_smoke.py tests/test_website_static.py`: **passed**.
 - `python -m pip check`: **No broken requirements found**.
 - `python -m pip install --dry-run --no-deps -r requirements.txt`: every locked runtime package was already installed at the required version.
 - `python -m piptools compile --dry-run --resolver=backtracking --strip-extras requirements.in`: resolved to the checked-in lock; **Dry-run, so nothing updated**.
 - Streamlit headless smoke check: server started and `/_stcore/health` returned **HTTP 200, `ok`**.
+- Approved public PDF inspection: **4 pages**, SHA-256 `f61f5934ba8657bca9f7df2efd464fbb0904874911af154ae439d3ca3d7fd086`; visual rendering and gate text-extraction order passed.
+- Pattern-based secret scan: **passed**. Obsolete-platform terms occur only in diligence assertions/history descriptions, and the only current project email found is `founder@access-ai.tech`.
 - Android wrapper check in an isolated detached worktree: **Gradle 8.14.3 on Java 17** was available. `testDebugUnitTest`, `lintDebug`, and `assembleDebug` could not execute because this Windows host could not establish Gradle's required loopback connection for its single-use daemon. This is an environment-blocked result, not a passing Android build.
 - `git diff --check`: **passed** before commit.
