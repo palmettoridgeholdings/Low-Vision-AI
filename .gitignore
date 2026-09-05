@@ -1,5 +1,6 @@
 .env
-.env.local
+.env.*
+!.env.example
 .streamlit/secrets.toml
 .venv/
 venv/
@@ -10,3 +11,34 @@ pytest-cache-files-*/
 .coverage
 htmlcov/
 .tmp/
+.firecrawl/
+
+# Local credentials and private keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+keystore.properties
+signing.properties
+*.apk
+*.aab
+
+# Android/Gradle local state, build output, and IDE files
+android/.gradle/
+android/.kotlin/
+android/.java-sockets/
+android/local.properties
+android/**/build/
+android/**/google-services.json
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+
+# Local IDE and operating-system metadata
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

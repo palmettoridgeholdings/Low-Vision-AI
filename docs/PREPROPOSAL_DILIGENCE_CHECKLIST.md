@@ -11,51 +11,51 @@ Do not send a new external Access AI proposal until all RED items are resolved a
 - [ ] Publish Terms of Use / service disclaimer.
 - [ ] Publish an Accessibility Statement.
 - [ ] Add footer links to Privacy, Terms, Accessibility, and Contact.
-- [ ] Replace outdated Access AI contact addresses with founder@access-ai.tech where appropriate.
+- [x] Replace outdated Access AI contact addresses with founder@access-ai.tech where appropriate.
 - [ ] Verify public website, prototype, PDF, legal pages, email links, canonical URL, and sitemap all resolve correctly over HTTPS.
-- [ ] Update the README so it accurately distinguishes the Streamlit proof of concept from the native Android product direction.
-- [ ] Supersede stale accessibility documentation that describes obsolete onboarding behavior.
-- [ ] Audit repository and history-facing documentation for Emergent or other obsolete builder/platform references.
-- [ ] Audit secrets and configuration handling. No production API key may be committed or embedded in a mobile client.
-- [ ] Confirm temporary image/audio handling and user-content retention statements match actual code.
+- [x] Update the README so it accurately distinguishes the Streamlit proof of concept from the native Android product direction.
+- [x] Supersede stale accessibility documentation that describes obsolete onboarding behavior.
+- [x] Audit repository and history-facing documentation for Emergent or other obsolete builder/platform references.
+- [x] Audit secrets and configuration handling. No production API key may be committed or embedded in a mobile client.
+- [x] Confirm temporary image/audio handling and user-content retention statements match actual code.
 - [ ] Review third-party data flows: OpenAI API, Streamlit hosting, Google Analytics, and any later Android services.
-- [ ] Verify that public product claims are supported by implemented or clearly labeled planned functionality.
+- [x] Verify that repository product claims are supported by implemented or clearly labeled planned functionality.
 
 ## YELLOW — professional polish
 
 - [ ] Rewrite generic landing-page copy where it reads like template/AI filler.
-- [ ] Add a concise Technical Progress / Project Status section with concrete engineering facts.
-- [ ] Clearly label the Streamlit application as a proof of concept.
-- [ ] Clearly identify native Android as the primary mobile development path.
+- [x] Add a concise Technical Progress / Project Status section with concrete engineering facts.
+- [x] Clearly label the Streamlit application as a proof of concept.
+- [x] Clearly identify native Android as the primary mobile development path.
 - [ ] Refresh the Smart Glasses Proof of Concept PDF with current contact information and vendor-neutral language.
 - [ ] Visually inspect all four PDF pages for spacing, table, line-break, and accessibility issues.
-- [ ] Remove or rewrite Mentra-specific language that is no longer appropriate for general outreach.
+- [x] Remove or rewrite Mentra-specific language that is no longer appropriate for general outreach.
 - [ ] Review page hierarchy, navigation, focus behavior, mobile layout, contrast, and zoom/reflow.
 - [ ] Check title, description, Open Graph metadata, favicon, robots, canonical, and sitemap.
-- [ ] Add appropriate organization/project ownership wording: Palmetto Ridge Holdings LLC / Palmetto Ridge Media Group.
+- [x] Add appropriate organization/project ownership wording: Palmetto Ridge Holdings LLC / Palmetto Ridge Media Group.
 
 ## CODE / REPOSITORY DILIGENCE
 
-- [ ] Run full automated test suite.
-- [ ] Run Python syntax/compile checks and dependency checks.
-- [ ] Identify dead code and unused dependencies without deleting anything still needed by the Streamlit prototype.
-- [ ] Check .gitignore for secrets, build outputs, local environments, Android signing files, and IDE artifacts.
-- [ ] Inspect docs for stale model names, paths, setup steps, screenshots, and deployment instructions.
+- [x] Run full automated test suite.
+- [x] Run Python syntax/compile checks and dependency checks.
+- [x] Identify dead code and unused dependencies without deleting anything still needed by the Streamlit prototype.
+- [x] Check .gitignore for secrets, build outputs, local environments, Android signing files, and IDE artifacts.
+- [x] Inspect docs for stale model names, paths, setup steps, screenshots, and deployment instructions.
 - [ ] Confirm README setup instructions reproduce a clean local install.
-- [ ] Confirm Android work remains isolated from the Streamlit deployment.
-- [ ] Confirm no Android/OpenAI production credential is shipped in the APK.
-- [ ] Document architecture and current milestone without overstating implementation status.
-- [ ] Verify repository contains no throwaway generated files, builder branding, placeholder copy, or unexplained experimental assets.
+- [x] Confirm Android work remains isolated from the Streamlit deployment.
+- [x] Confirm the isolated Android source contains no Android/OpenAI production credential path. APK inspection remains a release check.
+- [x] Document architecture and current milestone without overstating implementation status.
+- [x] Verify the tracked repository contains no throwaway generated files, builder branding, unexplained experimental assets, or unlabeled placeholder behavior.
 
 ## PRIVACY / DATA MODEL
 
-- [ ] Text questions: document where sent, where held, and whether persisted.
-- [ ] Images: document capture/submit behavior, provider transmission, and retention behavior.
-- [ ] Voice audio: document recording, temporary local handling, transcription transmission, and deletion behavior.
-- [ ] Conversation state: document Streamlit session behavior and future Android behavior.
-- [ ] Accessibility preferences: document current session storage and Android DataStore plan.
+- [x] Text questions: document where sent, where held, and whether persisted.
+- [x] Images: document capture/submit behavior, provider transmission, and retention behavior.
+- [x] Voice audio: document recording, temporary local handling, transcription transmission, and deletion behavior.
+- [x] Conversation state: document Streamlit session behavior and future Android behavior.
+- [x] Accessibility preferences: document current session storage and Android DataStore plan.
 - [ ] Website analytics: disclose Google Analytics and verify configuration.
-- [ ] Add user-facing notice before any future feature introduces accounts, cloud history, syncing, background capture, or persistent user content.
+- [x] Add user-facing policy notice before any future feature introduces accounts, cloud history, syncing, background capture, or persistent user content.
 - [ ] Ensure privacy disclosures and future Google Play Data Safety answers describe the same behavior.
 
 ## ACCESSIBILITY RELEASE GATE

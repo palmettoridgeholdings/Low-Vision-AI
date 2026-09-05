@@ -1,5 +1,6 @@
 """Offline onboarding and main-application regression tests."""
 
+import ast
 from pathlib import Path
 import openai
 from streamlit.testing.v1 import AppTest
@@ -130,6 +131,30 @@ def test_setup_speech_is_browser_local_and_has_no_gesture_handlers():
     assert "speechSynthesis" in html and "SpeechSynthesisUtterance" in html
     assert "touchstart" not in html and "touchmove" not in html and "swipe" not in html.lower()
     assert 'type="button"' in html and "aria-label" in html
+
+
+def test_responses_requests_disable_application_state_storage():
+    tree = ast.parse(APP_PATH.read_text(encoding="utf-8"))
+    store_values = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Dict):
+            store_values.extend(
+                value
+                for key, value in zip(node.keys, node.values)
+                if isinstance(key, ast.Constant) and key.value == "store"
+            )
+        elif isinstance(node, ast.Call):
+            store_values.extend(
+                keyword.value
+                for keyword in node.keywords
+                if keyword.arg == "store"
+            )
+    assert len(store_values) == 2
+    assert all(
+        isinstance(value, ast.Constant) and value.value is False
+        for value in store_values
+    )
+
 
 def test_missing_key_does_not_regress_chat_or_camera_shell(monkeypatch):
     app = main_app(monkeypatch)

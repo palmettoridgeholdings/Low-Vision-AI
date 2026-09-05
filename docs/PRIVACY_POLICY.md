@@ -34,7 +34,9 @@ Access AI is not designed to sell personal information or use user content for t
 
 ## 3. AI and service providers
 
-The current proof of concept uses OpenAI API services for AI responses, image analysis, transcription, and generated speech. When you use those features, the text, image, audio, or related context needed to complete the request is transmitted to OpenAI for processing.
+The current proof of concept uses OpenAI API services for AI responses, image analysis, transcription, generated speech, and optional web search. When you use those features, the text, image, audio, search query, or related context needed to complete the request is transmitted to OpenAI for processing. Web-search results may originate from third-party websites.
+
+Fixed onboarding prompts and the **Repeat last answer** action use the browser's speech-synthesis interface rather than the OpenAI API. Depending on the browser, operating system, installed speech engine, and device settings, speech synthesis may be handled on the device or by that platform's speech service.
 
 The public proof of concept is hosted using Streamlit Community Cloud. The public website is hosted using third-party web infrastructure and uses Google Analytics for basic website analytics.
 
@@ -42,14 +44,14 @@ These providers process information under their own contractual terms, privacy p
 
 ## 4. Storage and retention
 
-The current Streamlit prototype does not intentionally create long-term user profiles or a permanent conversation database.
+The current Streamlit prototype does not intentionally create long-term user profiles or a project-controlled permanent conversation database.
 
-- Conversation content and accessibility preferences are held in Streamlit session state while the session is active.
+- Conversation content and accessibility preferences are held in Streamlit session state while the session is active. They are not durable account preferences and can be lost when the session ends or resets.
 - Temporary audio files created for transcription are deleted by the application after the transcription request completes.
 - Camera images are sent for analysis when the user activates image analysis and are not intentionally written by the application to a permanent local image archive.
-- The native Android milestone is designed to store accessibility preferences locally on the user's device using Android DataStore. It is not designed to cloud-sync those preferences in the initial milestone.
+- The separate native Android milestone is planned to store accessibility preferences locally on the user's device using Android DataStore. It is not planned to cloud-sync those preferences in the initial milestone.
 
-Third-party providers may retain service data according to their own policies and service configuration. Standard OpenAI API abuse-monitoring logs may be retained for up to 30 days unless a different approved data-control configuration applies.
+The proof of concept sends Responses API requests with storage disabled. This prevents the application from opting into Responses API application-state storage, but it does not eliminate provider processing or all provider logs. OpenAI may retain abuse-monitoring logs for up to 30 days by default unless a different approved data-control configuration applies, and exceptional legal or safety retention may apply under the provider's terms.
 
 Website analytics data may be retained according to the configured Google Analytics settings and Google's applicable policies.
 

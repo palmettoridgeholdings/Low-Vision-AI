@@ -27,7 +27,7 @@ Access AI is being developed toward these goals:
 
 Automated accessibility checks are useful but are not treated as proof of real-world usability.
 
-The project uses code review, automated tests, and manual checks, and the native Android release process is intended to include physical-device testing with TalkBack before accessibility-sensitive milestones are considered complete.
+The repository uses code review and automated tests. Physical-device and assistive-technology checks are still required; the native Android release process is intended to include testing with TalkBack before accessibility-sensitive milestones are considered complete.
 
 The Streamlit proof of concept has known browser and framework limitations. Its behavior should not be interpreted as the final accessibility behavior of the native Android product.
 

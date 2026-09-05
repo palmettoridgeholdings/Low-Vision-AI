@@ -1,10 +1,10 @@
 # Accessibility review
 
-Review date: August 26, 2026
+Review updated: September 5, 2026
 
 ## Scope and method
 
-The review covered `app.py`, the complete onboarding and main-app flows in Streamlit's offline application harness, a live local Streamlit render, the browser accessibility tree, rendered styles, and no-hardware behavior. No API key, live API request, camera, microphone, physical screen reader, or Braille display was used.
+This update covers `app.py`, `onboarding.py`, the local speech component, and the onboarding and main-app flows exercised by Streamlit's offline application harness. Earlier browser observations are retained only where they still match the current code. No live API request, camera, microphone, physical screen reader, physical mobile device, or Braille display was used for this update.
 
 The review is WCAG-informed but is not a formal conformance certification. Manual testing on the supported assistive-technology combinations remains necessary.
 
@@ -17,7 +17,8 @@ Status: good baseline, with a framework limitation to monitor.
 - Onboarding exposes semantic headings, labeled radio groups, labeled comboboxes, and named buttons.
 - Main inputs are named **Camera task**, **Take a picture**, **Optional question about the picture**, **Record your question**, and **Your question**.
 - Status, warning, and error messages use Streamlit semantic message containers.
-- The blocked-autoplay fallback has the explicit accessible name **Access AI. Tap anywhere to begin spoken setup.** and receives programmatic focus.
+- First run exposes distinct **Start spoken setup** and **Start visual guided setup** buttons.
+- Spoken steps preserve readable page text and expose a **Repeat this setup instruction** button in the local browser-speech component.
 - Streamlit's internal selectbox disclosure buttons may be announced only as **Open**. The associated combobox inputs do retain their specific labels. Recheck this whenever Streamlit is upgraded.
 
 ### Keyboard navigation
@@ -32,11 +33,10 @@ Status: supported by native Streamlit controls.
 
 ### Contrast
 
-Status: passes for the inspected primary surfaces.
+Status: static styles provide a reasonable baseline; current manual verification remains required.
 
-- In the tested dark theme, body text measured approximately 18.1:1 against the page background.
-- The application overrides primary buttons to white text on `#a61b1b`, approximately 7.5:1.
-- The yellow focus outline is visually distinct on the tested dark background.
+- The application sets primary buttons to white text on `#a61b1b` and adds a three-pixel yellow focus outline.
+- These code-level color choices are not a substitute for checking every deployed theme, browser state, forced-color mode, and display configuration.
 - Because users can select other Streamlit/browser themes and extensions, retest contrast in every supported deployed theme.
 
 ### Large text and reflow
@@ -60,15 +60,15 @@ Status: improved.
 
 ### Voice-first operation
 
-Status: materially improved, with browser and service dependencies.
+Status: API-free onboarding speech is implemented, with browser and device dependencies.
 
-- Setup attempts welcome speech immediately and records each synthesis attempt so a rerun cannot duplicate the API request.
-- If autoplay is rejected, a full-screen control receives focus and accepts tap, Enter, or Space. No custom directional swipe competes with TalkBack or VoiceOver navigation.
-- One successful autoplay or unlock action enables automatic speech on later setup steps; there are no per-step **Hear this step** buttons.
-- A separate visible **Start accessible setup** control preserves the nonspoken visual path.
+- The welcome screen does not autoplay. It exposes explicit spoken and visual setup routes.
+- After **Start spoken setup** is activated, each later step requests browser speech synthesis and retains a **Repeat this setup instruction** control.
+- The visual route preserves the same semantic form controls without requesting automatic browser speech.
+- No custom directional swipe competes with TalkBack or VoiceOver navigation.
 - Every spoken instruction and answer has a visible text equivalent.
-- If a browser unexpectedly revokes playback permission on a later step, the same player can expose its tap/keyboard fallback again without synthesizing duplicate audio.
-- Speech-generation failure is nonfatal, and text-only operation remains available.
+- Browser-speech failure is nonfatal because the step text and controls remain available.
+- AI-generated answer speech is separate from onboarding speech; its failure does not discard the text answer.
 - Voice recording is disabled with a clear explanation when API access is unavailable.
 - Voice-first operation still depends on browser audio support, microphone permission for input, network connectivity, and API access.
 
@@ -98,7 +98,7 @@ Before production use, test at least:
 
 ## Remaining risks
 
-- Browser autoplay behavior varies and cannot be guaranteed; the full-screen tap/keyboard unlock is the reliable fallback and still needs physical mobile testing.
+- Browser speech-synthesis voices, autoplay behavior, iframe focus, and the repeat control still need physical mobile and screen-reader testing.
 - Streamlit controls and accessibility semantics can change on dependency upgrades, which is why the version is locked and upgrades require regression testing.
 - Dynamic conversation updates should be tested for announcement timing with physical screen readers.
 - Camera and model output accuracy are functional and safety risks, not just interface-accessibility risks.

@@ -184,6 +184,7 @@ def ask_text(question):
     ]
     kwargs = {
         "model": MODEL,
+        "store": False,
         "reasoning": {"effort": "low"},
         "instructions": instructions(),
         "input": [
@@ -275,6 +276,7 @@ Accuracy and explicit uncertainty matter more than confidence.
 
     r = client().responses.create(
         model=MODEL,
+        store=False,
         instructions=instructions(),
         input=[
             {

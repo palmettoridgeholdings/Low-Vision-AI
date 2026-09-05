@@ -4,7 +4,7 @@ Status: design only. Do not treat this document as implemented functionality.
 
 ## Goal
 
-Add Mentra or other smart-glasses clients later without coupling the current Streamlit prototype, accessibility logic, or OpenAI calls to one hardware vendor. The lowest-cost approach is a thin glasses client paired with the user's phone or a small local relay. The relay reuses the same request/response behavior as the web app while the glasses handle capture and concise output.
+Add smart-glasses clients later without coupling the current Streamlit prototype, accessibility logic, or OpenAI calls to one hardware vendor. The lowest-cost approach is a thin glasses client paired with the user's phone or a small local relay. The relay reuses the same request/response behavior as the web app while the glasses handle capture and concise output.
 
 ## Proposed boundaries
 
@@ -42,7 +42,7 @@ Suggested normalized data:
 - `AssistiveResponse`: request ID, answer text, optional speech bytes/reference, uncertainty notices, safety notices, and recoverable error information.
 - `DeviceCapabilities`: camera, microphone, speaker, display, haptics, maximum image size, supported audio formats, and connectivity state.
 
-Keep vendor types out of these objects. A `MentraAdapter` or another SDK adapter should translate only at the edge.
+Keep vendor types out of these objects. A vendor-specific SDK adapter should translate only at the edge.
 
 ## Transport
 
@@ -76,14 +76,13 @@ Do not place a long-lived OpenAI API key on the glasses. The relay or a controll
 2. Extract the existing API calls behind a service object and keep Streamlit as the only adapter.
 3. Build a local command-line fake device adapter for text and fixture images.
 4. Add the authenticated phone relay and test cancellation, reconnects, timeouts, and duplicate requests.
-5. Implement one vendor adapter, such as Mentra, using its then-current official SDK and a feature flag.
+5. Implement one vendor adapter using its then-current official SDK and a feature flag.
 6. Run usability and safety testing with blind and low-vision participants before broad deployment.
 
 ## Explicitly out of scope now
 
-- Mentra SDK dependencies or accounts.
+- Vendor-specific SDK dependencies or accounts.
 - Background/continuous camera streaming.
 - Navigation, obstacle avoidance, or safety certification.
 - New cloud infrastructure.
 - Storage of user captures, transcripts, or precise location.
-

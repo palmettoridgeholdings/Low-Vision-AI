@@ -1,13 +1,15 @@
 # Access AI
 
-Access AI is a Streamlit accessibility prototype for blind and low-vision users. It supports text and Braille-keyboard questions, recorded voice questions, spoken answers, and camera-assisted document reading, scene description, and object inspection.
+Access AI is an accessibility-focused project for blind and low-vision users. This branch contains the current Streamlit proof of concept: a browser application for text and Braille-keyboard questions, recorded voice questions, spoken answers, and camera-assisted document reading, scene description, and object inspection.
+
+Native Android is the primary mobile product direction, but it is developed separately and is not bundled into this Streamlit deployment. Do not interpret Streamlit behavior, browser speech, or session storage as the final Android architecture or accessibility experience.
 
 This is assistive software, not a navigation or safety system. A single image cannot establish that a route is safe. Verify uncertain medication, hazard, financial, legal, and navigation details with an appropriate trusted source.
 
-## Features
+## Streamlit proof-of-concept features
 
 - Screen-reader-friendly first-run setup with vision, interaction, platform, answer-style, and speech preferences.
-- Immediate spoken-onboarding attempt with a full-screen tap/keyboard fallback when autoplay is blocked.
+- Separate **Start spoken setup** and **Start visual guided setup** routes. The spoken route uses the browser's speech-synthesis interface and keeps equivalent text on screen.
 - Text input compatible with ordinary keyboards and refreshable Braille displays.
 - Recorded voice input and AI-generated spoken responses.
 - Camera tasks for **Read text / mail**, **Describe scene**, and **Find / inspect**.
@@ -15,6 +17,14 @@ This is assistive software, not a navigation or safety system. A single image ca
 - Optional web research for text questions.
 - Large controls, visible keyboard focus, high contrast, and a large-text profile.
 - Graceful operation when the API key, camera, or microphone is unavailable.
+
+## Project status
+
+- The Streamlit proof of concept is functional and covered by offline application-harness tests.
+- Accessibility preferences and conversation history are kept only in the current Streamlit session; the prototype has no user-account or project-controlled conversation database.
+- OpenAI-powered text, image, transcription, speech, and optional web-search requests require a server-side API key. Responses API calls explicitly disable application-state storage.
+- Native Android onboarding work is isolated from this branch and from Streamlit deployment. It must pass physical TalkBack and device testing before its accessibility behavior is represented as validated.
+- Smart-glasses support is design-only. No smart-glasses SDK or device integration is implemented here.
 
 ## Requirements
 
@@ -103,12 +113,13 @@ The tests use Streamlit's application harness and a fake OpenAI client. They cov
 
 - startup and accessible onboarding;
 - missing-key behavior;
-- successful and blocked onboarding autoplay;
-- tap/keyboard audio unlocking and duplicate-synthesis prevention;
+- the separate spoken and visual setup routes;
+- API-free browser speech for fixed onboarding prompts;
+- totally-blind defaults and user overrides;
+- setup progression and same-session resume behavior;
 - text-only questions with speech disabled;
-- nonfatal speech-generation failure and retry availability;
-- camera-unavailable/no-photo behavior;
-- camera mode and non-hardware feature availability.
+- camera controls when no photo is provided;
+- response-storage settings on every Responses API call.
 
 For a local server smoke check:
 
@@ -149,7 +160,7 @@ Streamlit installs root-level `requirements.txt` automatically. Keep secrets in 
 
 - **Screen reader:** Use headings to move among Camera assistance, Ask by voice, text/Braille input, and Conversation. Every main input has a visible accessible label.
 - **Keyboard:** Tab through controls and use Space or Enter to activate buttons. Radio groups support arrow keys. Select boxes use the browser and screen reader's normal combobox commands.
-- **Spoken setup:** Access AI attempts the welcome automatically. If the browser blocks it, the first screen becomes one large **Access AI. Tap anywhere to begin spoken setup.** control and receives focus. Tap it or press Enter/Space once; later setup steps speak automatically. A separate visible **Start accessible setup** button keeps the visual path available.
+- **Spoken setup:** Activate **Start spoken setup**. Each later step keeps readable semantic text on screen and asks the browser's speech-synthesis interface to speak the same instruction. **Start visual guided setup** follows the same form flow without requesting automatic browser speech.
 - **Voice first:** Enable **Automatically speak answers** and choose a voice in the preferences expander. Text answers remain visible if speech generation fails.
 - **Large text:** Choose **Large text** as the primary interaction preference, or select a low-vision profile, to enlarge body text, fields, conversation text, and headings.
 - **No camera or microphone:** Continue with the text input. Denying hardware permission does not block the rest of the app.
@@ -164,7 +175,7 @@ Confirm `OPENAI_API_KEY` is available in the same shell that starts Streamlit, o
 
 ### Spoken onboarding does not start
 
-If autoplay is blocked, activate the full-screen **Access AI. Tap anywhere to begin spoken setup.** control by tapping it or pressing Enter/Space. One activation unlocks continuous setup speech; there are no per-step speech buttons. Confirm API access if the app reports that speech is unavailable. The text version of every setup step remains usable.
+Confirm that **Start spoken setup** was selected and activate **Repeat this setup instruction** on the current step. Browser speech support, selected system voice, and autoplay behavior vary by browser and device. Onboarding speech does not require an OpenAI API key, and the text version of every setup step remains usable with a screen reader or keyboard.
 
 ### Microphone or camera is unavailable
 
@@ -192,10 +203,19 @@ requirements.txt              Exact generated runtime lock
 requirements-dev.txt          Test and lock-generation tools
 tests/test_app_smoke.py        Offline Streamlit smoke tests
 onboarding.py                  Spoken-setup state and component wrapper
-components/spoken_setup/       Accessible browser autoplay/unlock component
+components/spoken_setup/       Browser speech component for setup instructions
 docs/accessibility-review.md   Accessibility findings and manual test matrix
+docs/PRIVACY_POLICY.md         Prototype data handling and provider disclosures
+docs/TERMS_OF_USE.md            Prototype terms and safety limitations
+docs/ACCESSIBILITY_STATEMENT.md Accessibility goals, status, and limitations
 docs/smart-glasses-interface.md Future modular glasses interface design
 ```
+
+## Data handling and contact
+
+Review the [Privacy Policy](docs/PRIVACY_POLICY.md), [Terms of Use](docs/TERMS_OF_USE.md), and [Accessibility Statement](docs/ACCESSIBILITY_STATEMENT.md) before operating or publishing the prototype. Deployment-specific website analytics, legal-page publication, and third-party configuration must be verified separately because they are not configured by this repository.
+
+Questions and accessibility feedback: **founder@access-ai.tech**.
 
 ## Smart-glasses integration
 

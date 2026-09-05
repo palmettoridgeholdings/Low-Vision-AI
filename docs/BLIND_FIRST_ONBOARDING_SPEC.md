@@ -1,5 +1,14 @@
 # Access AI Blind-First Onboarding Implementation Specification
 
+> Historical implementation specification. The Streamlit proof of concept now uses
+> explicit **Start spoken setup** and **Start visual guided setup** routes with local
+> browser speech. Its state lasts only for the current Streamlit session. Native
+> Android development, including durable on-device preferences, is maintained
+> separately and must not be inferred from the Streamlit implementation.
+
+Physical TalkBack, VoiceOver, and Braille testing described below remains a release
+gate; this document is not evidence of formal accessibility conformance.
+
 ## Objective
 A totally blind user must be able to launch Access AI for the first time, complete onboarding, enter the application, ask a question, hear the answer, repeat it, and reopen accessibility settings without sighted assistance.
 
