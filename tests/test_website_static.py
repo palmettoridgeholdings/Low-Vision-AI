@@ -161,13 +161,28 @@ def test_contact_and_builder_language_are_clean():
     assert not re.search(r"\b(emergent|mentra|lovable|builder\.io|bolt\.new|v0\.dev)\b", combined, re.I)
 
 
-def test_no_unverified_analytics_or_compliance_claims():
+def test_existing_ga4_property_is_configured_once_per_page():
+    for path in HTML_FILES:
+        source = path.read_text(encoding="utf-8")
+        scripts = [attrs for tag, attrs in parsed(path).attrs if tag == "script" and "src" in attrs]
+        assert len(scripts) == 1, path.name
+        assert scripts[0]["src"] == "https://www.googletagmanager.com/gtag/js?id=G-E4TE8BSQBV"
+        assert "async" in scripts[0]
+        configs = re.findall(r"gtag\(\s*['\"]config['\"]\s*,\s*['\"]([^'\"]+)['\"]", source)
+        assert configs == ["G-E4TE8BSQBV"], path.name
+        assert re.findall(r"\bG-[A-Z0-9]+\b", source) == ["G-E4TE8BSQBV"] * 2
+
+
+def test_analytics_disclosure_and_compliance_claims():
     combined = "\n".join(path.read_text(encoding="utf-8") for path in HTML_FILES)
-    assert "googletagmanager" not in combined.lower()
-    assert "gtag(" not in combined.lower()
     assert not re.search(r"\b(WCAG|ADA)\s+(compliant|certified|conformant)\b", combined, re.I)
     privacy = (SITE_ROOT / "privacy.html").read_text(encoding="utf-8")
-    assert "does not include Google Analytics" in privacy
+    policy = (SITE_ROOT.parents[1] / "docs" / "PRIVACY_POLICY.md").read_text(encoding="utf-8")
+    for source in (privacy, policy):
+        assert "uses Google Analytics for basic website measurement" in source
+        assert "does not include Google Analytics" not in source
+        for disclosure in ("page interactions", "approximate location derived from IP", "browser and device", "timestamps", "referrer", "usage data"):
+            assert disclosure in source
 
 
 def test_accessibility_baseline_is_present():

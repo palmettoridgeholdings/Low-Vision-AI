@@ -38,7 +38,7 @@ The current proof of concept uses OpenAI API services for AI responses, image an
 
 Fixed onboarding prompts and the **Repeat last answer** action use the browser's speech-synthesis interface rather than the OpenAI API. Depending on the browser, operating system, installed speech engine, and device settings, speech synthesis may be handled on the device or by that platform's speech service.
 
-The public proof of concept is hosted using Streamlit Community Cloud. The public website is hosted using third-party web infrastructure. The production-ready replacement website package in this repository does not include Google Analytics or another first-party analytics tag. Hosting providers may still generate ordinary security and access logs. If analytics is enabled later, this policy will be updated before that collection begins.
+The public proof of concept is hosted using Streamlit Community Cloud. The public website uses third-party hosting infrastructure. access-ai.tech uses Google Analytics for basic website measurement. Depending on Google's services and configuration, it may process page interactions, approximate location derived from IP, browser and device information, timestamps, referrer information, and related usage data. Hosting providers may also generate ordinary security and access logs.
 
 These providers process information under their own contractual terms, privacy practices, and security controls. Access AI does not control every aspect of a third-party provider's infrastructure.
 
@@ -54,6 +54,8 @@ The current Streamlit prototype does not intentionally create long-term user pro
 The proof of concept sends Responses API requests with storage disabled. This prevents the application from opting into Responses API application-state storage, but it does not eliminate provider processing or all provider logs. OpenAI may retain abuse-monitoring logs for up to 30 days by default unless a different approved data-control configuration applies, and exceptional legal or safety retention may apply under the provider's terms.
 
 Hosting security and access logs may be retained according to the hosting provider's settings and policies.
+
+Google Analytics data is processed and retained according to Google's services and the property's configured settings.
 
 ## 5. Camera and microphone access
 
