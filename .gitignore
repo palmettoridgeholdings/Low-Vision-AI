@@ -42,3 +42,14 @@ android/.cxx/
 *.iml
 .DS_Store
 Thumbs.db
+
+# Mobile app (mobile/ — Expo/React Native/TypeScript)
+# Additive only: the Android/Gradle and credential rules above are already
+# unanchored (no leading "/"), so they already cover mobile/android/... too.
+node_modules/
+.expo/
+.expo-shared/
+mobile/dist/
+mobile/web-build/
+mobile/coverage/
+*.tsbuildinfo
