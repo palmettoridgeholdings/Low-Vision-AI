@@ -19,15 +19,6 @@ export const remoteSpeechPlaybackService: SpeechPlaybackService = {
       }
       const player = createAudioPlayer({ uri });
       activePlayer = player;
-      player.addListener("playbackStatusUpdate", (status: { didJustFinish?: boolean }) => {
-        if (status.didJustFinish) {
-          options?.onDone?.();
-          player.remove();
-          if (activePlayer === player) {
-            activePlayer = null;
-          }
-        }
-      });
       player.play();
     } catch (error) {
       options?.onError?.(error);

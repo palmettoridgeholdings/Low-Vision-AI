@@ -44,7 +44,7 @@ limitations" below before treating anything here as verified.
 cd mobile
 npm ci
 
-# Confirm the locked dependency set still matches Expo SDK 54:
+# Confirm the locked dependency set still matches Expo SDK 57:
 npx expo install --check
 
 # Optional: only needed once you have a real backend to point at.
@@ -156,7 +156,7 @@ Read these before treating the foundation as a finished product:
 - **No Gradle APK yet.** Native generation succeeds, but the verification
   environment could not download the Gradle distribution. Build locally or
   with EAS before installing the app.
-- **Voice and server-audio need device testing.** Their Expo SDK 54 APIs pass
+- **Voice and server-audio need device testing.** Their Expo SDK 57 APIs pass
   typechecking and bundling, but microphone lifecycle, interruption, and
   playback still require a real Android device.
 - **Camera/voice/question backends are mock-only.** `src/services/**/remote*.ts`
