@@ -9,6 +9,7 @@ import {
   ANSWER_BEHAVIOR_PROMPT,
   ANSWER_STYLE_LABELS,
   ANSWER_STYLE_ORDER,
+  ANSWER_STYLE_VALIDATION_MESSAGE,
 } from "@/constants/onboardingCopy";
 import { spacing } from "@/theme/spacing";
 
@@ -43,7 +44,8 @@ export function OnboardingAnswerBehaviorScreen() {
         router.back();
       }}
       onContinue={() => router.push("/onboarding/confirmation")}
-      continueDisabled={!onboarding.answerStyle}
+      canContinue={!!onboarding.answerStyle}
+      validationMessage={ANSWER_STYLE_VALIDATION_MESSAGE}
       testID="onboarding-answer-behavior-screen"
     >
       <View style={{ marginBottom: spacing.md }}>
@@ -52,6 +54,7 @@ export function OnboardingAnswerBehaviorScreen() {
           description="Read every answer aloud as soon as it's ready"
           value={settings.autoSpeakAnswers}
           onValueChange={handleToggleAutoSpeak}
+          announceChange={onboarding.setupRoute === "spoken"}
           testID="onboarding-auto-speak-toggle"
         />
       </View>
@@ -60,6 +63,7 @@ export function OnboardingAnswerBehaviorScreen() {
         options={options}
         selectedValue={onboarding.answerStyle}
         onSelect={handleSelectStyle}
+        announceSelection={onboarding.setupRoute === "spoken"}
       />
     </OnboardingStepShell>
   );

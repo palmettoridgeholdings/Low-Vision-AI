@@ -13,11 +13,19 @@ import {
   RetryableError,
 } from "@/components";
 import { ScreenContainer } from "@/components/ScreenContainer";
-import { useAnswerSpeech } from "@/hooks/useAnswerSpeech";
+import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useSpokenGuidance } from "@/hooks/useSpokenGuidance";
 import { getServices } from "@/services/serviceRegistry";
 import { recordLastAnswer } from "@/state/lastAnswerStore";
 import type { ImageAnalysisMode } from "@/types/services";
+import {
+  CAMERA_ANALYZING_MESSAGE,
+  CAMERA_CAPTURING_MESSAGE,
+  CAMERA_PERMISSION_CONTEXT,
+  buildCameraReadyMessage,
+  buildRetryMessage,
+} from "@/constants/statusMessages";
 import { colors } from "@/theme/colors";
 import { fontSize, lineHeight } from "@/theme/typography";
 import { spacing } from "@/theme/spacing";
@@ -28,6 +36,10 @@ const MODE_OPTIONS: { value: ImageAnalysisMode; label: string }[] = [
   { value: "describe_scene", label: "Describe scene" },
   { value: "find_inspect", label: "Find / inspect" },
 ];
+
+const MODE_LABELS: Record<ImageAnalysisMode, string> = Object.fromEntries(
+  MODE_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<ImageAnalysisMode, string>;
 
 type AnalysisState =
   | { status: "idle" }
@@ -40,6 +52,12 @@ type AnalysisState =
  * the typed ImageAnalysisService (mock by default). Never presents its
  * output as safe for navigation — see the disclaimer rendered with every
  * result, sourced from the service response itself, not invented here.
+ *
+ * Every result (description + safety disclaimer) is spoken unconditionally
+ * through useSpokenGuidance, regardless of the "Automatically speak
+ * answers" setting: that setting governs conversational Q&A answers, while
+ * a camera analysis's safety disclaimer is safety-critical information a
+ * totally blind user must hear every time, not an optional personalization.
  */
 export function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -48,18 +66,32 @@ export function CameraScreen() {
   const [analysisState, setAnalysisState] = useState<AnalysisState>({ status: "idle" });
   const cameraRef = useRef<CameraView>(null);
   const isConnected = useNetworkStatus();
-  const speakAnswer = useAnswerSpeech();
+  const { speak, stop, repeat } = useSpokenGuidance();
+
+  // Speak the permission context before the OS shows its own dialog, and
+  // confirm camera readiness (current mode + how to change it + nonvisual
+  // positioning guidance) once access is already granted.
+  useAutoSpeakOnMount(
+    CAMERA_PERMISSION_CONTEXT,
+    !!permission && !permission.granted && permission.canAskAgain,
+  );
+  useAutoSpeakOnMount(
+    buildCameraReadyMessage(MODE_LABELS[mode]),
+    !!permission?.granted && analysisState.status === "idle",
+  );
 
   const capture = useCallback(async () => {
     if (!cameraRef.current) {
       return;
     }
     setAnalysisState({ status: "analyzing" });
+    await speak(CAMERA_CAPTURING_MESSAGE);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
       if (!photo?.uri) {
         throw new Error("The camera did not return a photo. Please try again.");
       }
+      await speak(CAMERA_ANALYZING_MESSAGE);
       const result = await getServices().imageAnalysis.analyze({
         imageUri: photo.uri,
         mode,
@@ -71,15 +103,14 @@ export function CameraScreen() {
         description: result.description,
         disclaimer: result.disclaimer,
       });
-      void speakAnswer({ answerText: `${result.description} ${result.disclaimer}` });
+      void speak(`${result.description} ${result.disclaimer}`);
     } catch (error) {
-      setAnalysisState({
-        status: "error",
-        message:
-          error instanceof Error ? error.message : "Something went wrong analyzing the photo.",
-      });
+      const message =
+        error instanceof Error ? error.message : "Something went wrong analyzing the photo.";
+      setAnalysisState({ status: "error", message });
+      void speak(buildRetryMessage(message));
     }
-  }, [mode, question, speakAnswer]);
+  }, [mode, question, speak]);
 
   if (!permission) {
     return <LoadingState label="Checking camera permission" />;
@@ -90,16 +121,18 @@ export function CameraScreen() {
       return (
         <ScreenContainer testID="camera-screen">
           <Heading>Camera assistance</Heading>
-          <PermissionDeniedState permissionLabel="camera" />
+          <PermissionDeniedState
+            permissionLabel="camera"
+            onRetry={() => void requestPermission()}
+            testID="camera-permission-denied"
+          />
         </ScreenContainer>
       );
     }
     return (
       <ScreenContainer testID="camera-screen">
         <Heading>Camera assistance</Heading>
-        <BodyText style={styles.permissionBody}>
-          Access AI needs camera access to read text, describe a scene, or help find an object.
-        </BodyText>
+        <BodyText style={styles.permissionBody}>{CAMERA_PERMISSION_CONTEXT}</BodyText>
         <AccessibleButton
           label="Allow camera access"
           onPress={() => void requestPermission()}
@@ -114,11 +147,29 @@ export function CameraScreen() {
       <Heading>Camera assistance</Heading>
       {!isConnected ? <OfflineBanner /> : null}
 
+      <View style={styles.speechControls}>
+        <AccessibleButton
+          label="Repeat last spoken message"
+          size="secondary"
+          variant="secondary"
+          onPress={() => void repeat()}
+          testID="camera-repeat-status"
+        />
+        <AccessibleButton
+          label="Stop speech"
+          size="secondary"
+          variant="secondary"
+          onPress={() => void stop()}
+          testID="camera-stop-speech"
+        />
+      </View>
+
       <ChoiceList
         groupLabel="What should Access AI do with the photo?"
         options={MODE_OPTIONS}
         selectedValue={mode}
         onSelect={setMode}
+        announceSelection
       />
 
       {mode === "find_inspect" ? (
@@ -133,7 +184,14 @@ export function CameraScreen() {
         />
       ) : null}
 
-      <View style={styles.previewWrapper}>
+      <View
+        style={styles.previewWrapper}
+        // The live camera preview conveys nothing a totally blind user can
+        // act on and has no stable accessible name, so TalkBack should skip
+        // over it entirely rather than stopping on an unhelpful node.
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
         <CameraView ref={cameraRef} style={styles.preview} facing="back" />
       </View>
 
@@ -166,6 +224,12 @@ export function CameraScreen() {
 
 const styles = StyleSheet.create({
   permissionBody: {
+    marginBottom: spacing.md,
+  },
+  speechControls: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   input: {

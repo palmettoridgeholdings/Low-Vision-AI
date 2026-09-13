@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Switch, View } from "react-native";
 
 import { BodyText } from "@/components/BodyText";
+import { useSpeech } from "@/hooks/useSpeech";
 import { colors } from "@/theme/colors";
 import { spacing } from "@/theme/spacing";
 import { MIN_TOUCH_TARGET } from "@/theme/a11y";
@@ -10,6 +11,8 @@ export interface AccessibleToggleProps {
   description?: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
+  /** When true, speaks "<label>, on."/"<label>, off." after each change — a spoken confirmation for a user who cannot see the switch's visual state change. */
+  announceChange?: boolean;
   testID?: string;
 }
 
@@ -24,8 +27,18 @@ export function AccessibleToggle({
   description,
   value,
   onValueChange,
+  announceChange = false,
   testID,
 }: AccessibleToggleProps) {
+  const { speak } = useSpeech();
+
+  const handleChange = (next: boolean) => {
+    onValueChange(next);
+    if (announceChange) {
+      void speak(`${label}, ${next ? "on" : "off"}.`);
+    }
+  };
+
   return (
     <Pressable
       style={styles.row}
@@ -33,7 +46,7 @@ export function AccessibleToggle({
       accessibilityLabel={label}
       accessibilityHint={description}
       accessibilityState={{ checked: value }}
-      onPress={() => onValueChange(!value)}
+      onPress={() => handleChange(!value)}
       testID={testID}
     >
       <View style={styles.textColumn}>
@@ -46,7 +59,7 @@ export function AccessibleToggle({
       </View>
       <Switch
         value={value}
-        onValueChange={onValueChange}
+        onValueChange={handleChange}
         trackColor={{ false: colors.disabled, true: colors.accent }}
         thumbColor={colors.textPrimary}
         // The Pressable row above owns accessibility semantics; hide the

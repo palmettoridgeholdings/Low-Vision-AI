@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useSpeech } from "@/hooks/useSpeech";
 import { colors } from "@/theme/colors";
 import { fontSize, fontWeight, lineHeight } from "@/theme/typography";
 import { spacing } from "@/theme/spacing";
@@ -19,6 +20,8 @@ export interface ChoiceListProps<T extends string> {
   options: ChoiceOption<T>[];
   selectedValue: T | null;
   onSelect: (value: T) => void;
+  /** When true, speaks "<label> selected." after each selection — a spoken confirmation for a user who cannot see the radio group's visual selected state change. */
+  announceSelection?: boolean;
   testID?: string;
 }
 
@@ -33,8 +36,18 @@ export function ChoiceList<T extends string>({
   options,
   selectedValue,
   onSelect,
+  announceSelection = false,
   testID,
 }: ChoiceListProps<T>) {
+  const { speak } = useSpeech();
+
+  const handleSelect = (option: ChoiceOption<T>) => {
+    onSelect(option.value);
+    if (announceSelection) {
+      void speak(`${option.label} selected.`);
+    }
+  };
+
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel={groupLabel} testID={testID}>
       {options.map((option) => (
@@ -42,7 +55,7 @@ export function ChoiceList<T extends string>({
           key={option.value}
           option={option}
           selected={option.value === selectedValue}
-          onSelect={() => onSelect(option.value)}
+          onSelect={() => handleSelect(option)}
         />
       ))}
     </View>

@@ -8,6 +8,7 @@ import {
   INTERACTION_PREFERENCE_LABELS,
   INTERACTION_PREFERENCE_ORDER,
   INTERACTION_PROMPT,
+  INTERACTION_VALIDATION_MESSAGE,
 } from "@/constants/onboardingCopy";
 
 /** State C (Interaction) from docs/BLIND_FIRST_ONBOARDING_SPEC.md. */
@@ -39,7 +40,8 @@ export function OnboardingInteractionScreen() {
         router.back();
       }}
       onContinue={() => router.push("/onboarding/device")}
-      continueDisabled={!onboarding.interactionPreference}
+      canContinue={!!onboarding.interactionPreference}
+      validationMessage={INTERACTION_VALIDATION_MESSAGE}
       testID="onboarding-interaction-screen"
     >
       <ChoiceList
@@ -47,6 +49,7 @@ export function OnboardingInteractionScreen() {
         options={options}
         selectedValue={onboarding.interactionPreference}
         onSelect={handleSelect}
+        announceSelection={onboarding.setupRoute === "spoken"}
       />
     </OnboardingStepShell>
   );

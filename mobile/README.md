@@ -42,9 +42,9 @@ limitations" below before treating anything here as verified.
 
 ```powershell
 cd mobile
-npm ci
+npm install
 
-# Confirm the locked dependency set still matches Expo SDK 57:
+# Confirm the installed dependency set matches Expo SDK 57:
 npx expo install --check
 
 # Optional: only needed once you have a real backend to point at.
@@ -149,10 +149,21 @@ mobile/
 
 Read these before treating the foundation as a finished product:
 
-- **Automated foundation checks pass.** The locked dependencies install,
-  `expo install --check`, Expo Doctor, strict TypeScript, ESLint with zero
-  warnings, Prettier, 49 Jest tests, native Android prebuild, and an Android
-  Metro export have all completed successfully.
+- **No committed lockfile yet.** An earlier commit on this branch added a
+  `package-lock.json` that was corrupted (not valid JSON/UTF-8) — it has been
+  removed, and this README's setup step reverted from `npm ci` to
+  `npm install` accordingly. Regenerate and commit a real lockfile
+  (`npm install` from a clean `node_modules`, then `git add package-lock.json`)
+  the first time this project is set up somewhere with real npm registry
+  access; this sandbox's network access does not reach `registry.npmjs.org`,
+  so that could not be done here.
+- **Verification here is static/best-effort, not a full run.** This sandbox
+  cannot reach the npm registry, so `npm install`, `expo install --check`,
+  Expo Doctor, ESLint, Jest, and a Metro export could not actually be
+  executed for this change; TypeScript's compiler API was used directly
+  (bypassing `npm`) for a best-effort type/syntax check instead. Run the full
+  `npm test` / `npm run lint` / `npm run typecheck` / Metro export locally
+  before merging — see "Test, lint, typecheck, format" above.
 - **No Gradle APK yet.** Native generation succeeds, but the verification
   environment could not download the Gradle distribution. Build locally or
   with EAS before installing the app.

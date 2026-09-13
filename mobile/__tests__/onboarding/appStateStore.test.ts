@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   APP_STATE_STORAGE_KEY,
+  applyRecommendedBlindDefaults,
   appStateStore,
   chooseAnswerBehavior,
   chooseDevicePreference,
@@ -43,6 +44,30 @@ describe("appStateStore", () => {
 
     const state = appStateStore.getState();
     // The profile itself is untouched by overriding one of its defaults.
+    expect(state.onboarding.visionProfile).toBe("totally_blind");
+    expect(state.onboarding.interactionPreference).toBe("large_text");
+    expect(state.settings.autoSpeakAnswers).toBe(false);
+  });
+
+  it("applyRecommendedBlindDefaults sets a full totally-blind profile in one step", () => {
+    applyRecommendedBlindDefaults();
+
+    const state = appStateStore.getState();
+    expect(state.onboarding.setupRoute).toBe("spoken");
+    expect(state.onboarding.visionProfile).toBe("totally_blind");
+    expect(state.onboarding.interactionPreference).toBe("voice_first");
+    expect(state.onboarding.devicePreference).toBe("android_talkback");
+    expect(state.onboarding.answerStyle).toBe("short_direct");
+    expect(state.settings.autoSpeakAnswers).toBe(true);
+    expect(state.onboarding.currentStep).toBe("confirmation");
+  });
+
+  it("applyRecommendedBlindDefaults still leaves every value user-overridable afterward", () => {
+    applyRecommendedBlindDefaults();
+    chooseInteractionPreference("large_text");
+    updateSettings({ autoSpeakAnswers: false });
+
+    const state = appStateStore.getState();
     expect(state.onboarding.visionProfile).toBe("totally_blind");
     expect(state.onboarding.interactionPreference).toBe("large_text");
     expect(state.settings.autoSpeakAnswers).toBe(false);

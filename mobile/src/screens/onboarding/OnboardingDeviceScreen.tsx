@@ -8,6 +8,7 @@ import {
   DEVICE_PREFERENCE_LABELS,
   DEVICE_PREFERENCE_ORDER,
   DEVICE_PROMPT,
+  DEVICE_VALIDATION_MESSAGE,
 } from "@/constants/onboardingCopy";
 
 /** State D (Device) from docs/BLIND_FIRST_ONBOARDING_SPEC.md. */
@@ -34,7 +35,8 @@ export function OnboardingDeviceScreen() {
         router.back();
       }}
       onContinue={() => router.push("/onboarding/answer-behavior")}
-      continueDisabled={!onboarding.devicePreference}
+      canContinue={!!onboarding.devicePreference}
+      validationMessage={DEVICE_VALIDATION_MESSAGE}
       testID="onboarding-device-screen"
     >
       <ChoiceList
@@ -42,6 +44,7 @@ export function OnboardingDeviceScreen() {
         options={options}
         selectedValue={onboarding.devicePreference}
         onSelect={handleSelect}
+        announceSelection={onboarding.setupRoute === "spoken"}
       />
     </OnboardingStepShell>
   );

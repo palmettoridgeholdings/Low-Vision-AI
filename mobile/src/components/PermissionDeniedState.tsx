@@ -2,6 +2,7 @@ import { Linking, StyleSheet, View } from "react-native";
 
 import { AccessibleButton } from "@/components/AccessibleButton";
 import { BodyText } from "@/components/BodyText";
+import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { spacing } from "@/theme/spacing";
 
 export interface PermissionDeniedStateProps {
@@ -15,18 +16,22 @@ export interface PermissionDeniedStateProps {
  * Shown when a required hardware permission (camera/microphone) was denied.
  * Explains what happened in plain language and offers a direct path to the
  * OS settings screen, plus an in-app retry once the user has changed it.
+ * Speaks that same explanation unconditionally on mount — this screen is
+ * itself a dead end for a totally blind user unless it announces itself and
+ * stays fully navigable by TalkBack/keyboard/Braille (see
+ * docs/BLIND_FIRST_ONBOARDING_SPEC.md section 10, "Failure Behavior").
  */
 export function PermissionDeniedState({
   permissionLabel,
   onRetry,
   testID,
 }: PermissionDeniedStateProps) {
+  const message = `Access AI does not have permission to use the ${permissionLabel}. Open your device settings to allow it, then come back and try again.`;
+  useAutoSpeakOnMount(message, true);
+
   return (
     <View style={styles.container} accessible accessibilityRole="alert" testID={testID}>
-      <BodyText style={styles.text}>
-        Access AI does not have permission to use the {permissionLabel}. Open your device settings
-        to allow it, then come back and try again.
-      </BodyText>
+      <BodyText style={styles.text}>{message}</BodyText>
       <AccessibleButton
         label="Open device settings"
         size="secondary"

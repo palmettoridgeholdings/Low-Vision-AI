@@ -119,15 +119,75 @@ a stable string value (`"totally_blind"`, etc.) per the spec's explicit
 warning against inferring behavior from a visible label.
 
 Every onboarding step shares one shell (`src/components/OnboardingStepShell.tsx`):
-a heading, the step's prompt as always-visible text, a manual "Repeat this
-instruction" button, the step's own content, and Back/Continue. The prompt
-is additionally auto-spoken once per step **only** on the spoken-setup
-route (`setupRoute === "spoken"`) — the visual route gets identical text on
-screen without forced speech, matching the existing Streamlit prototype's
-documented behavior. No custom swipe/gesture handling exists anywhere in
-onboarding; every control is a standard, focusable, labeled
-button/radio/switch so TalkBack/VoiceOver's own navigation and double-tap
-activation work unmodified (spec section 5).
+a heading, the step's prompt as always-visible text, manual "Repeat this
+instruction" and "Stop speech" buttons, the step's own content, and
+Back/Continue. The prompt is additionally auto-spoken once per step
+**only** on the spoken-setup route (`setupRoute === "spoken"`) — the visual
+route gets identical text on screen without forced speech, matching the
+existing Streamlit prototype's documented behavior. The one exception is
+the Welcome screen itself (`OnboardingWelcomeScreen.tsx`), which speaks its
+introduction unconditionally: a first-time totally blind user hasn't chosen
+a route yet, so there is nothing to gate on. No custom swipe/gesture
+handling exists anywhere in onboarding; every control is a standard,
+focusable, labeled button/radio/switch so TalkBack/VoiceOver's own
+navigation and double-tap activation work unmodified (spec section 5).
+
+Continue is never silently disabled. Each step passes
+`canContinue`/`validationMessage` to the shell instead of the old
+`continueDisabled`; activating Continue with an incomplete required choice
+announces and displays the validation message (and clears it automatically
+once the choice is made) rather than leaving an inert control with no
+explanation. Selecting an option or toggling a switch is confirmed aloud on
+the spoken route via `ChoiceList`'s `announceSelection` and
+`AccessibleToggle`'s `announceChange` props — both speak "<label>
+selected."/"<label>, on." through the shared spoken-guidance controller
+below, so a screen-reader user gets the same confirmation a sighted user
+gets from watching the radio/switch's visual state change.
+
+"Use recommended blind settings" is the first focusable control on the
+Welcome screen — ahead of "Start spoken setup" — calling
+`applyRecommendedBlindDefaults()` in `appStateStore.ts`, which sets the
+spoken route, `totally_blind` vision, `voice_first` interaction,
+`android_talkback` device, `short_direct` answers, and auto-speak-answers
+on, then jumps straight to Confirmation. Every one of those values remains
+exactly as user-overridable afterward (via "Review settings" or Settings)
+as if each step had been chosen individually — this is a shortcut through
+the same state machine, not a separate locked mode.
+
+## Spoken-guidance controller
+
+`src/services/speech/spokenGuidanceController.ts` is the single app-wide
+owner of on-device speech. Every other speech entry point —
+`useSpeech()`, `useSpokenGuidance()`, `useAutoSpeakOnMount`,
+`useStartupSpeech`, `useAnswerSpeech`, and every "Repeat"/"Stop
+speech"/status-announcement call in the onboarding, Voice, and Camera
+screens — ultimately calls into this one controller, which exposes:
+
+- **State:** `"ready" | "preparing" | "playing" | "stopped" | "error"`,
+  readable reactively via `useSpokenGuidance()` (backed by
+  `useSyncExternalStore`, the same pattern as `appStateStore`).
+- **`speak(text)`:** cancels whatever is queued/playing first, then speaks.
+  Android's `TextToSpeech` queues consecutive `Speech.speak()` calls rather
+  than interrupting, so without this a fast sequence of announcements (e.g.
+  "Recording started..." immediately followed by an error) would play back
+  to back instead of the later one replacing the earlier — which is exactly
+  the "overlapping/stale speech" failure mode the blind-first pass calls
+  out. `deviceTtsService.speak()` itself also calls `Speech.stop()` first,
+  as defense in depth for any future direct caller.
+- **`stop()`** and **`repeatLast()`:** stop whatever is playing, or re-speak
+  the most recently requested prompt.
+- **A monotonically increasing token**, incremented on every `speak()`/
+  `stop()` call. Each call's `onDone`/`onError` callback checks its own
+  token against the controller's current one before touching state, so a
+  slow callback from an utterance the user has already moved past (e.g. by
+  navigating to a different screen, which triggers its own `speak()`/`stop()`)
+  can never overwrite state a newer utterance has already reached.
+
+`useSpeech()` is kept as a thin, backward-compatible wrapper over
+`useSpokenGuidance()` with its original `{ isSpeaking, speak, stop }` shape
+(it still stops speech on backgrounding/unmount); anything that needs the
+full state or `repeatLast()` — a "Repeat last spoken message" button on the
+Voice/Camera screens, for instance — uses `useSpokenGuidance()` directly.
 
 ## Startup speech
 
@@ -182,6 +242,55 @@ handling; neither prompts the user. Legacy storage, overlay, and vibration
 permissions are explicitly blocked in `app.json`. No location, background
 recording, contacts, emergency-calling, or smart-glasses permission is used.
 
+Both permission screens speak their context — why the permission is needed
+— **before** the OS shows its own dialog: the context text is auto-spoken
+as soon as the "needs-request" state renders (i.e. before the user presses
+"Allow microphone/camera access", which is what actually triggers the OS
+prompt), via `MICROPHONE_PERMISSION_CONTEXT`/`CAMERA_PERMISSION_CONTEXT` in
+`src/constants/statusMessages.ts`. A denied permission is handled by one
+shared component, `PermissionDeniedState`, which speaks its own explanation
+unconditionally on mount and always offers both "Open device settings" and
+a wired-up "Try again" — Voice and Camera each pass their own retry
+callback (re-request the permission) rather than leaving the user stuck.
+
+## Voice and camera status narration
+
+Both the Voice and Camera screens narrate their own workflow state through
+`useSpokenGuidance()`, using fixed copy from `src/constants/statusMessages.ts`
+rather than ad hoc strings, so a totally blind user gets the same
+step-by-step audio cues a sighted user gets from watching the screen:
+
+- **Voice:** mic-ready → recording-started (with how to stop or cancel) →
+  recording-stopped/processing → recognized question (the transcribed text,
+  read back so the user can catch a misrecognition) → the answer (via the
+  existing `useAnswerSpeech`, which still respects the user's "Automatically
+  speak answers" setting) → or, on failure, the error plus how to retry. A
+  new "Cancel recording" control (only shown while recording) discards the
+  in-progress recording and announces "Recording cancelled." rather than
+  submitting it. Narration is deliberately silent *during* an active
+  recording — only before it starts and after it stops — so TTS is never
+  something the microphone could pick up mid-recording ("prevent
+  overlapping speech capture" is handled by timing, not by trying to duck
+  audio levels). A best-effort unmount cleanup stops any in-progress
+  recording if the user navigates away without pressing Stop or Cancel.
+- **Camera:** camera-ready (current mode, how to change it, nonvisual
+  positioning guidance) → mode-change confirmation (via `ChoiceList`'s
+  `announceSelection`) → capture-started → analyzing → result together with
+  its safety disclaimer, or the error plus how to retry. The result/
+  disclaimer announcement is spoken unconditionally, **not** gated by
+  "Automatically speak answers" — that setting governs conversational Q&A
+  answers, whereas the camera's safety disclaimer ("never rely on this for
+  navigation, safety, medication...") is safety-critical information, not
+  an optional personalization, so it is never silently skipped.
+- **Camera preview accessibility:** the `View` wrapping `CameraView` sets
+  `accessibilityElementsHidden` and `importantForAccessibility="no-hide-descendants"`,
+  so TalkBack's focus navigation skips the live preview entirely instead of
+  landing on a video feed it can't meaningfully describe.
+
+Both screens also expose "Repeat last spoken message" and "Stop speech"
+controls (via `useSpokenGuidance()`), so a missed or unwanted announcement
+is always recoverable without waiting for the next state change.
+
 ## Testing strategy
 
 `__tests__/` is organized by what's being verified, not by file layout:
@@ -203,6 +312,15 @@ recording, contacts, emergency-calling, or smart-glasses permission is used.
   "nothing to repeat" and "repeat the real last answer" paths for that
   control.
 
+- `speech/` — beyond the startup-speech decision function, the
+  spoken-guidance controller itself: state transitions, stop-before-speak,
+  and that a stale callback from a superseded `speak()` call cannot
+  overwrite newer state (the token-invalidation guarantee).
+- `voice/`, `camera/` — permission states (checking/granted/needs-request/denied,
+  each with its pre-permission announcement and a working retry), the
+  status-announcement sequence, and (camera only) that the live preview is
+  excluded from the accessibility tree.
+
 See `mobile/README.md`'s "Known limitations" for what has and hasn't
 actually been executed in the environment this was built in.
 
@@ -212,7 +330,8 @@ actually been executed in the environment this was built in.
   build on, not a tested integration).
 - A native Gradle/EAS build artifact (no Android SDK/EAS account available
   in the build environment).
-- Physical TalkBack/device accessibility testing (spec section 13's manual
-  script still needs to run on a real device).
+- Physical TalkBack/device accessibility testing — see
+  `docs/TALKBACK_TEST_SCRIPT.md` for the manual script; it has not been run
+  on a real device yet.
 - Smart-glasses support (explicitly excluded per the task's own constraints
   and the repository's existing `docs/smart-glasses-interface.md`).

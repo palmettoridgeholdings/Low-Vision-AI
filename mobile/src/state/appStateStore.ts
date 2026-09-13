@@ -76,6 +76,32 @@ export function chooseVisionProfile(profile: VisionProfile): void {
   }));
 }
 
+/**
+ * "Use recommended blind settings" shortcut (Welcome screen, requirement 2 of
+ * the blind-first accessibility pass): configures a full totally-blind
+ * profile in one action — spoken setup route, totally-blind vision,
+ * voice-first interaction, Android/TalkBack, automatic spoken answers, and
+ * short/direct responses — and jumps straight to Confirmation so the user
+ * hears the whole profile read back immediately. Every value here remains
+ * exactly as user-overridable afterward (via "Review settings" or Settings)
+ * as if each screen had been stepped through individually.
+ */
+export function applyRecommendedBlindDefaults(): void {
+  update((prev) => ({
+    ...prev,
+    onboarding: {
+      ...prev.onboarding,
+      setupRoute: "spoken",
+      visionProfile: "totally_blind",
+      interactionPreference: "voice_first",
+      devicePreference: "android_talkback",
+      answerStyle: "short_direct",
+      currentStep: "confirmation",
+    },
+    settings: { ...prev.settings, autoSpeakAnswers: true },
+  }));
+}
+
 export function chooseInteractionPreference(preference: InteractionPreference): void {
   update((prev) => ({
     ...prev,

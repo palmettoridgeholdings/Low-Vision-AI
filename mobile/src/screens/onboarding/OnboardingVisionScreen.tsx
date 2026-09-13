@@ -8,6 +8,7 @@ import {
   VISION_PROFILE_LABELS,
   VISION_PROFILE_ORDER,
   VISION_PROMPT,
+  VISION_VALIDATION_MESSAGE,
 } from "@/constants/onboardingCopy";
 
 /** State B (Vision) from docs/BLIND_FIRST_ONBOARDING_SPEC.md. */
@@ -35,7 +36,8 @@ export function OnboardingVisionScreen() {
         router.back();
       }}
       onContinue={() => router.push("/onboarding/interaction")}
-      continueDisabled={!onboarding.visionProfile}
+      canContinue={!!onboarding.visionProfile}
+      validationMessage={VISION_VALIDATION_MESSAGE}
       testID="onboarding-vision-screen"
     >
       <ChoiceList
@@ -43,6 +45,7 @@ export function OnboardingVisionScreen() {
         options={options}
         selectedValue={onboarding.visionProfile}
         onSelect={handleSelect}
+        announceSelection={onboarding.setupRoute === "spoken"}
       />
     </OnboardingStepShell>
   );

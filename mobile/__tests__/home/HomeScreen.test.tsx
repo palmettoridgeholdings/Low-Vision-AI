@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -50,28 +50,32 @@ describe("HomeScreen primary controls", () => {
     expect(mockPush).toHaveBeenCalledWith("/settings");
   });
 
-  it("speaks a clear fallback when there is no previous answer to repeat", () => {
+  it("speaks a clear fallback when there is no previous answer to repeat", async () => {
     const Speech = require("expo-speech");
     render(<HomeScreen />);
 
     fireEvent.press(screen.getByRole("button", { name: "Repeat last answer" }));
 
-    expect(Speech.speak).toHaveBeenCalledWith(
-      "There is no previous answer yet.",
-      expect.anything(),
+    await waitFor(() =>
+      expect(Speech.speak).toHaveBeenCalledWith(
+        "There is no previous answer yet.",
+        expect.anything(),
+      ),
     );
   });
 
-  it("repeats the actual last answer once one has been recorded", () => {
+  it("repeats the actual last answer once one has been recorded", async () => {
     recordLastAnswer("The label says: Ibuprofen 200 milligrams.", "camera");
     const Speech = require("expo-speech");
     render(<HomeScreen />);
 
     fireEvent.press(screen.getByRole("button", { name: "Repeat last answer" }));
 
-    expect(Speech.speak).toHaveBeenCalledWith(
-      "The label says: Ibuprofen 200 milligrams.",
-      expect.anything(),
+    await waitFor(() =>
+      expect(Speech.speak).toHaveBeenCalledWith(
+        "The label says: Ibuprofen 200 milligrams.",
+        expect.anything(),
+      ),
     );
     expect(screen.getByText("The label says: Ibuprofen 200 milligrams.")).toBeTruthy();
   });

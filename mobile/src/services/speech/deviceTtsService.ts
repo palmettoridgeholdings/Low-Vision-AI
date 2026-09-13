@@ -10,6 +10,18 @@ import type { TtsService, TtsSpeakOptions } from "@/types/services";
  */
 export const deviceTtsService: TtsService = {
   async speak(text: string, options?: TtsSpeakOptions) {
+    // Android's TextToSpeech queues consecutive speak() calls instead of
+    // interrupting, so without an explicit stop() first, two announcements
+    // made in quick succession would both play, one after the other, rather
+    // than the second replacing the first. Stopping here (in addition to
+    // spokenGuidanceController's own stop-before-speak) keeps this guarantee
+    // even for any future direct caller of this service.
+    try {
+      await Speech.stop();
+    } catch {
+      // Nothing was playing, or the platform refused the stop — proceed to
+      // speak regardless; a missed stop is not worth blocking speech over.
+    }
     Speech.speak(text, {
       onDone: options?.onDone,
       onStopped: options?.onDone,
