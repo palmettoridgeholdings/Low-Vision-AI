@@ -1,5 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
+jest.mock("@/utils/accessibilityFocus", () => ({
+  focusAccessibilityNode: jest.fn(),
+}));
+
 const mockRequestPermission = jest.fn();
 let mockPermissionResponse: { granted: boolean; canAskAgain: boolean } | null = {
   granted: true,
@@ -21,11 +25,16 @@ jest.mock("expo-camera", () => {
 });
 
 import { CameraScreen } from "@/screens/CameraScreen";
+import { focusAccessibilityNode } from "@/utils/accessibilityFocus";
 import {
   CAMERA_ANALYZING_MESSAGE,
   CAMERA_CAPTURING_MESSAGE,
   CAMERA_PERMISSION_CONTEXT,
 } from "@/constants/statusMessages";
+
+function accessibilityInfoMock() {
+  return require("react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo");
+}
 
 /**
  * Covers requirement 5 (camera permission context spoken before the OS
@@ -39,6 +48,8 @@ describe("CameraScreen", () => {
     mockPermissionResponse = { granted: true, canAskAgain: true };
     mockRequestPermission.mockClear();
     mockTakePictureAsync.mockClear();
+    (focusAccessibilityNode as jest.Mock).mockClear();
+    accessibilityInfoMock().__emitScreenReaderChanged(false);
   });
 
   it("speaks the permission context before requesting, when access has not been granted", async () => {
@@ -123,5 +134,44 @@ describe("CameraScreen", () => {
     await waitFor(() =>
       expect(Speech.speak).toHaveBeenCalledWith("Describe scene selected.", expect.anything()),
     );
+  });
+
+  it("moves accessibility focus into the status region once a result arrives", async () => {
+    render(<CameraScreen />);
+    await waitFor(() => expect(screen.getByTestId("camera-capture")).toBeTruthy());
+    const callsBeforeCapture = (focusAccessibilityNode as jest.Mock).mock.calls.length;
+
+    fireEvent.press(screen.getByTestId("camera-capture"));
+
+    await waitFor(() => expect(screen.getByTestId("camera-result-panel")).toBeTruthy());
+    expect((focusAccessibilityNode as jest.Mock).mock.calls.length).toBeGreaterThan(
+      callsBeforeCapture,
+    );
+  });
+
+  it("announces capture status through TalkBack instead of device TTS when a screen reader is active", async () => {
+    const AccessibilityInfo = accessibilityInfoMock();
+    const Speech = require("expo-speech");
+    AccessibilityInfo.__emitScreenReaderChanged(true);
+
+    render(<CameraScreen />);
+    await waitFor(() => expect(screen.getByTestId("camera-capture")).toBeTruthy());
+    Speech.speak.mockClear();
+    AccessibilityInfo.announceForAccessibility.mockClear();
+
+    fireEvent.press(screen.getByTestId("camera-capture"));
+
+    await waitFor(() =>
+      expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
+        CAMERA_CAPTURING_MESSAGE,
+      ),
+    );
+    await waitFor(() => expect(screen.getByTestId("camera-result-panel")).toBeTruthy());
+    await waitFor(() =>
+      expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
+        expect.stringContaining("mock description"),
+      ),
+    );
+    expect(Speech.speak).not.toHaveBeenCalled();
   });
 });

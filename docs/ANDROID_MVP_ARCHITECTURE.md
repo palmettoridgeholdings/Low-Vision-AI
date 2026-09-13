@@ -189,6 +189,75 @@ screens — ultimately calls into this one controller, which exposes:
 full state or `repeatLast()` — a "Repeat last spoken message" button on the
 Voice/Camera screens, for instance — uses `useSpokenGuidance()` directly.
 
+## Screen-reader detection and TalkBack coexistence
+
+`src/services/accessibility/screenReaderStatusService.ts` is the single
+app-wide detector for whether TalkBack/VoiceOver is active, built the same
+way as the spoken-guidance controller: plain closures over a `createStore`
+instance (never a class — its `getSnapshot`/`subscribe` are handed to
+`useSyncExternalStore` as bare function references), backed by
+`AccessibilityInfo.isScreenReaderEnabled()` plus a `"screenReaderChanged"`
+listener. Its status is `"unknown" | "enabled" | "disabled"` —
+**`"unknown"` until the first native check resolves**, never a guess — and
+`useScreenReaderStatus()` is the reactive hook wrapper for components that
+need to know it directly (e.g. choosing which first-launch instructions to
+show on Welcome).
+
+Detection is used only to pick the right *delivery channel* for
+guidance/narration, never to remove a control or a piece of functionality
+— a totally blind user with TalkBack off (or a failed detection, which
+`screenReaderStatusService` treats the same as "unknown", never as
+"disabled") still gets full offline device-TTS guidance and every control
+this document describes elsewhere. The one place this status changes
+behavior is inside `spokenGuidanceController.speak()` itself: while status
+is `"enabled"`, it hands the utterance to
+`AccessibilityInfo.announceForAccessibility()` (TalkBack's own
+announcement channel) instead of starting `deviceTtsService`, so the app
+never plays a second, competing audio stream over TalkBack's own speech.
+Every existing call site — onboarding prompts, permission pre-briefings,
+selection/toggle confirmations, Voice/Camera status narration, spoken
+answers — keeps calling `speak()`/`useSpeech()`/`useSpokenGuidance()`
+exactly as before; nothing about *whether* an utterance fires changes
+(so explicit settings like "Automatically speak answers" are unaffected),
+only *how* it's delivered. While status is `"unknown"` or `"disabled"`,
+behavior is byte-for-byte what it was before this capability existed.
+
+The Welcome screen additionally branches its actual *content* on this
+status (`getOnboardingWelcomeMessage()` in
+`src/constants/accessibilityCopy.ts`): the TalkBack-enabled variant leads
+with drag-to-explore/swipe/double-tap-anywhere mechanics (meant to be
+delivered *through* TalkBack, which is exactly what the controller's
+channel selection does automatically); the TalkBack-disabled variant
+explains that TalkBack is off, that Access AI cannot enable it
+automatically, mentions — without promising it's configured on this
+device — the volume-button accessibility shortcut, and points at "Open
+Android accessibility settings" (`src/components/AccessibilitySettingsButton.tsx`,
+on both Welcome and Help). That button opens the system Accessibility
+settings via `Linking.sendIntent("android.settings.ACCESSIBILITY_SETTINGS")`
+(falling back to `Linking.openSettings()` if the direct intent fails —
+`src/utils/openAccessibilitySettings.ts`), never requests a permission or
+tries to enable a service programmatically, and — on returning to the
+foreground — announces the return and calls
+`screenReaderStatusService.refresh()` rather than waiting on the native
+change event to fire promptly.
+
+## Predictable accessibility focus
+
+`src/components/AccessibilityFocusRegion.tsx` wraps content that should
+receive imperative accessibility focus whenever a `focusKey` prop changes
+— typically a screen's own name (fires once on mount) or a piece of state
+already being tracked (`flowState.status` on Voice/Camera, a validation
+message on `OnboardingStepShell`), so focus follows navigation, permission
+results, validation errors, recording start/stop, processing, and
+results/failures, without ever refiring on an unrelated rerender or
+stealing focus back mid-exploration. The actual native call
+(`AccessibilityInfo.setAccessibilityFocus` via `findNodeHandle`) lives in
+`src/utils/accessibilityFocus.ts`, kept separate so it can be mocked
+directly in tests rather than depending on `findNodeHandle` resolving a
+real native tag in the test renderer; like everything else in this pass,
+it never throws — a failed or skipped focus call is a missed nicety, not a
+reason to break navigation.
+
 ## Startup speech
 
 `src/hooks/useStartupSpeech.ts` speaks a short welcome once per app launch
@@ -320,6 +389,21 @@ is always recoverable without waiting for the next state change.
   each with its pre-permission announcement and a working retry), the
   status-announcement sequence, and (camera only) that the live preview is
   excluded from the accessibility tree.
+- `accessibility/` — screen-reader detection (`"unknown"` default,
+  resolving to the real value, reacting to a live change, listener
+  cleanup), `spokenGuidanceController`'s TalkBack-vs-device-TTS channel
+  selection (announces through `AccessibilityInfo.announceForAccessibility`
+  while active, resumes on-device TTS once it's off, never both at once),
+  the accessibility-focus utility/region (calls the focus API with a real
+  handle, never on an unrelated rerender), and the "Open Android
+  accessibility settings" control (direct intent, fallback, return/recheck
+  announcement) — plus targeted additions in `voice/`, `camera/`, and
+  `onboarding/`/`help/` covering the same TalkBack-channel and
+  focus-on-transition behavior in context. Every one of these mocks
+  `AccessibilityInfo`/the focus utility directly; **automated tests cannot
+  prove that a real device actually reads a dragged-over control aloud or
+  activates it on a double-tap anywhere on the screen** — see
+  `docs/TALKBACK_TEST_SCRIPT.md`'s "What automated tests cannot cover".
 
 See `mobile/README.md`'s "Known limitations" for what has and hasn't
 actually been executed in the environment this was built in.

@@ -1,3 +1,6 @@
+import { AccessibilityInfo } from "react-native";
+
+import { screenReaderStatusService } from "@/services/accessibility/screenReaderStatusService";
 import { deviceTtsService } from "@/services/speech/deviceTtsService";
 import { createStore } from "@/utils/createStore";
 
@@ -42,6 +45,20 @@ export interface SpokenGuidanceSnapshot {
  * on-screen text and TalkBack/keyboard/Braille navigation, so a failure here
  * must never block navigation or any other control (see
  * docs/BLIND_FIRST_ONBOARDING_SPEC.md section 10, "Failure Behavior").
+ *
+ * Screen-reader awareness (blind-first accessibility pass, requirement 2 —
+ * "avoid competing speech"): every call site in this app (onboarding
+ * guidance, status narration, selection confirmations, and spoken answers
+ * alike) keeps calling speak() exactly as before — nothing about *whether*
+ * to speak changes here, so the user's explicit settings (e.g. "Automatically
+ * speak answers") are preserved untouched. What changes is *how* the
+ * utterance is delivered: while a screen reader is active, on-device TTS
+ * would play as a second, independent audio stream fighting TalkBack's own
+ * speech for the same output, so this controller hands the same text to
+ * `AccessibilityInfo.announceForAccessibility()` instead — TalkBack's own
+ * announcement channel — rather than starting deviceTtsService. Once the
+ * screen reader is off (or not yet detected), behavior is unchanged from
+ * before this pass.
  */
 function createSpokenGuidanceController() {
   const store = createStore<SpokenGuidanceSnapshot>({ state: "ready", lastPrompt: null });
@@ -73,6 +90,24 @@ function createSpokenGuidanceController() {
 
     if (myToken !== token) {
       // Superseded by a newer speak()/stop() while we were stopping.
+      return;
+    }
+
+    if (screenReaderStatusService.getSnapshot().status === "enabled") {
+      // Hand off to the screen reader's own announcement channel instead of
+      // starting a second, competing audio stream over it. announceForAccessibility
+      // has no completion callback, so there is nothing to await here; settle
+      // straight into "stopped" (nothing is actively "playing" from this
+      // controller's point of view) unless a newer call has already superseded us.
+      try {
+        AccessibilityInfo.announceForAccessibility(text);
+      } catch {
+        // A failed native announcement is not fatal — the on-screen text
+        // this utterance mirrors is still there for TalkBack to read directly.
+      }
+      if (myToken === token) {
+        store.setState((prev) => ({ ...prev, state: "stopped" }));
+      }
       return;
     }
 

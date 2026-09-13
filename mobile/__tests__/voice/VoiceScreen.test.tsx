@@ -1,6 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
+jest.mock("@/utils/accessibilityFocus", () => ({
+  focusAccessibilityNode: jest.fn(),
+}));
+
 import { VoiceScreen } from "@/screens/VoiceScreen";
+import { focusAccessibilityNode } from "@/utils/accessibilityFocus";
 import {
   MICROPHONE_PERMISSION_CONTEXT,
   VOICE_MIC_READY_MESSAGE,
@@ -8,6 +13,10 @@ import {
   VOICE_RECORDING_CANCELLED_MESSAGE,
   VOICE_RECORDING_STARTED_MESSAGE,
 } from "@/constants/statusMessages";
+
+function accessibilityInfoMock() {
+  return require("react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo");
+}
 
 /**
  * Covers requirement 5 (permission context spoken before the OS dialog,
@@ -20,6 +29,11 @@ import {
  * mock the transcription/question services.
  */
 describe("VoiceScreen", () => {
+  beforeEach(() => {
+    (focusAccessibilityNode as jest.Mock).mockClear();
+    accessibilityInfoMock().__emitScreenReaderChanged(false);
+  });
+
   it("speaks the permission context before requesting, when access has not been granted", async () => {
     const AudioModule = require("expo-audio").AudioModule;
     AudioModule.getRecordingPermissionsAsync.mockResolvedValueOnce({
@@ -127,5 +141,38 @@ describe("VoiceScreen", () => {
         expect.anything(),
       ),
     );
+  });
+
+  it("moves accessibility focus into the status region when recording starts", async () => {
+    render(<VoiceScreen />);
+    await waitFor(() => expect(screen.getByTestId("voice-start-recording")).toBeTruthy());
+    const callsBeforeStart = (focusAccessibilityNode as jest.Mock).mock.calls.length;
+
+    fireEvent.press(screen.getByTestId("voice-start-recording"));
+
+    await waitFor(() => expect(screen.getByTestId("voice-stop-recording")).toBeTruthy());
+    expect((focusAccessibilityNode as jest.Mock).mock.calls.length).toBeGreaterThan(
+      callsBeforeStart,
+    );
+  });
+
+  it("announces recording start through TalkBack instead of device TTS when a screen reader is active", async () => {
+    const AccessibilityInfo = accessibilityInfoMock();
+    const Speech = require("expo-speech");
+    AccessibilityInfo.__emitScreenReaderChanged(true);
+
+    render(<VoiceScreen />);
+    await waitFor(() => expect(screen.getByTestId("voice-start-recording")).toBeTruthy());
+    Speech.speak.mockClear();
+    AccessibilityInfo.announceForAccessibility.mockClear();
+
+    fireEvent.press(screen.getByTestId("voice-start-recording"));
+
+    await waitFor(() =>
+      expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
+        VOICE_RECORDING_STARTED_MESSAGE,
+      ),
+    );
+    expect(Speech.speak).not.toHaveBeenCalled();
   });
 });

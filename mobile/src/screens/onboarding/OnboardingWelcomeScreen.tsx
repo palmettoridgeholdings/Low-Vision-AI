@@ -1,12 +1,19 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
-import { AccessibleButton, BodyText, Heading } from "@/components";
+import {
+  AccessibilityFocusRegion,
+  AccessibilitySettingsButton,
+  AccessibleButton,
+  BodyText,
+  Heading,
+} from "@/components";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { applyRecommendedBlindDefaults, chooseSetupRoute } from "@/state/appStateStore";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
+import { useScreenReaderStatus } from "@/hooks/useScreenReaderStatus";
 import { useSpokenGuidance } from "@/hooks/useSpokenGuidance";
-import { ONBOARDING_WELCOME_MESSAGE } from "@/constants/onboardingCopy";
+import { getOnboardingWelcomeMessage } from "@/constants/accessibilityCopy";
 import { spacing } from "@/theme/spacing";
 
 /**
@@ -20,12 +27,24 @@ import { spacing } from "@/theme/spacing";
  * "Start spoken setup"), so a user who wants the fastest path to a working,
  * totally-blind-tuned app never has to step through five more screens to
  * get it — every value it sets stays reviewable/editable afterward.
+ *
+ * The introduction itself now branches on live screen-reader status
+ * (blind-first accessibility pass, requirement 3): while status is still
+ * "unknown" (the brief moment before the first native check resolves),
+ * nothing is spoken yet — speaking based on a guess could immediately
+ * contradict what TalkBack itself is about to do. Once resolved,
+ * spokenGuidanceController.speak() itself decides whether this text plays
+ * as device TTS or as a native TalkBack announcement (see
+ * spokenGuidanceController.ts) — this screen only has to pick the right
+ * *content* for the situation.
  */
 export function OnboardingWelcomeScreen() {
   const router = useRouter();
   const { speak, stop } = useSpokenGuidance();
+  const screenReaderStatus = useScreenReaderStatus();
+  const introMessage = getOnboardingWelcomeMessage(screenReaderStatus);
 
-  useAutoSpeakOnMount(ONBOARDING_WELCOME_MESSAGE, true);
+  useAutoSpeakOnMount(introMessage, screenReaderStatus !== "unknown");
 
   const useRecommendedBlindSettings = () => {
     applyRecommendedBlindDefaults();
@@ -44,8 +63,10 @@ export function OnboardingWelcomeScreen() {
 
   return (
     <ScreenContainer scroll testID="onboarding-welcome-screen">
-      <Heading>Welcome to Access AI</Heading>
-      <BodyText style={styles.body}>{ONBOARDING_WELCOME_MESSAGE}</BodyText>
+      <AccessibilityFocusRegion focusKey="onboarding-welcome-mount">
+        <Heading>Welcome to Access AI</Heading>
+        <BodyText style={styles.body}>{introMessage}</BodyText>
+      </AccessibilityFocusRegion>
 
       <View style={styles.actions}>
         <AccessibleButton
@@ -72,7 +93,7 @@ export function OnboardingWelcomeScreen() {
           leadingGlyph="🔊"
           size="secondary"
           variant="secondary"
-          onPress={() => void speak(ONBOARDING_WELCOME_MESSAGE)}
+          onPress={() => void speak(introMessage)}
           testID="onboarding-welcome-repeat"
         />
         <AccessibleButton
@@ -83,6 +104,7 @@ export function OnboardingWelcomeScreen() {
           onPress={() => void stop()}
           testID="onboarding-welcome-stop-speech"
         />
+        <AccessibilitySettingsButton testID="onboarding-welcome-accessibility-settings" />
       </View>
     </ScreenContainer>
   );

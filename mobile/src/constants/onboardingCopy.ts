@@ -17,18 +17,11 @@ export const STARTUP_WELCOME_MESSAGE =
   "You're on the Access AI home screen. Explore for Ask by voice, Camera assistance, Type a question, Repeat last answer, Help, and Settings.";
 
 /**
- * Spoken and on-screen introduction for the Welcome step. Unlike the rest of
- * onboarding, this is read aloud unconditionally on every first launch (see
- * OnboardingWelcomeScreen) — a totally blind first-time user has not chosen
- * a setup route yet, so there is no "spoken route" flag to gate on. It
- * covers, in order: that setup needs no sight, standard TalkBack navigation
- * (swipe to move focus, double-tap to activate — never a custom gesture),
- * that this message is already being read automatically, the one-tap
- * recommended-blind-settings shortcut, the manual spoken-setup route, and
- * how to repeat or stop the speech.
+ * The Welcome step's first-launch spoken/on-screen introduction now branches
+ * on live screen-reader status — see getOnboardingWelcomeMessage() and the
+ * TALKBACK_*_WELCOME_MESSAGE constants in src/constants/accessibilityCopy.ts
+ * (blind-first accessibility pass, requirement 3).
  */
-export const ONBOARDING_WELCOME_MESSAGE =
-  "Welcome to Access AI. This entire setup can be completed without sight, and this introduction is being read aloud automatically. If you're using TalkBack, swipe right or left to move between items on this screen, and double-tap an item to activate it. The first item, Use recommended blind settings, immediately sets up Access AI for totally blind use with voice-first interaction and short, direct spoken answers — every one of those choices can still be reviewed or changed afterward. To choose each setting yourself instead, use Start spoken setup. To hear this introduction again at any time, use Repeat this introduction. To stop the speech, use Stop speech.";
 
 export const VISION_PROMPT =
   "First, choose the vision option that best describes how you want Access AI to assist you.";

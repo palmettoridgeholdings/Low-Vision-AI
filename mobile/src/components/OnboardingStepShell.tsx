@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { AccessibilityFocusRegion } from "@/components/AccessibilityFocusRegion";
 import { AccessibleButton } from "@/components/AccessibleButton";
 import { BodyText } from "@/components/BodyText";
 import { Heading } from "@/components/Heading";
@@ -79,8 +80,10 @@ export function OnboardingStepShell({
 
   return (
     <ScreenContainer scroll testID={testID}>
-      <Heading>{heading}</Heading>
-      <BodyText style={styles.prompt}>{prompt}</BodyText>
+      <AccessibilityFocusRegion focusKey={heading}>
+        <Heading>{heading}</Heading>
+        <BodyText style={styles.prompt}>{prompt}</BodyText>
+      </AccessibilityFocusRegion>
       <View style={styles.speechControls}>
         <AccessibleButton
           label="Repeat this instruction"
@@ -103,14 +106,16 @@ export function OnboardingStepShell({
       <View style={styles.content}>{children}</View>
 
       {visibleErrorMessage ? (
-        <BodyText
-          accessibilityRole="alert"
-          accessibilityLiveRegion="assertive"
-          style={styles.error}
-          testID="onboarding-validation-error"
-        >
-          {visibleErrorMessage}
-        </BodyText>
+        <AccessibilityFocusRegion focusKey={visibleErrorMessage}>
+          <BodyText
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+            style={styles.error}
+            testID="onboarding-validation-error"
+          >
+            {visibleErrorMessage}
+          </BodyText>
+        </AccessibilityFocusRegion>
       ) : null}
 
       <View style={styles.footer}>

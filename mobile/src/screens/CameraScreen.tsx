@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 
 import {
+  AccessibilityFocusRegion,
   AccessibleButton,
   BodyText,
   ChoiceList,
@@ -131,8 +132,10 @@ export function CameraScreen() {
     }
     return (
       <ScreenContainer testID="camera-screen">
-        <Heading>Camera assistance</Heading>
-        <BodyText style={styles.permissionBody}>{CAMERA_PERMISSION_CONTEXT}</BodyText>
+        <AccessibilityFocusRegion focusKey="camera-needs-request">
+          <Heading>Camera assistance</Heading>
+          <BodyText style={styles.permissionBody}>{CAMERA_PERMISSION_CONTEXT}</BodyText>
+        </AccessibilityFocusRegion>
         <AccessibleButton
           label="Allow camera access"
           onPress={() => void requestPermission()}
@@ -203,21 +206,27 @@ export function CameraScreen() {
         testID="camera-capture"
       />
 
-      {analysisState.status === "analyzing" ? <LoadingState label="Analyzing photo" /> : null}
+      <AccessibilityFocusRegion focusKey={analysisState.status} testID="camera-status-region">
+        {analysisState.status === "analyzing" ? <LoadingState label="Analyzing photo" /> : null}
 
-      {analysisState.status === "error" ? (
-        <RetryableError message={analysisState.message} onRetry={capture} testID="camera-error" />
-      ) : null}
+        {analysisState.status === "error" ? (
+          <RetryableError
+            message={analysisState.message}
+            onRetry={capture}
+            testID="camera-error"
+          />
+        ) : null}
 
-      {analysisState.status === "success" ? (
-        <View style={styles.resultPanel} testID="camera-result-panel">
-          <Heading level={2}>Result</Heading>
-          <BodyText>{analysisState.description}</BodyText>
-          <BodyText secondary style={styles.disclaimer}>
-            {analysisState.disclaimer}
-          </BodyText>
-        </View>
-      ) : null}
+        {analysisState.status === "success" ? (
+          <View style={styles.resultPanel} testID="camera-result-panel">
+            <Heading level={2}>Result</Heading>
+            <BodyText>{analysisState.description}</BodyText>
+            <BodyText secondary style={styles.disclaimer}>
+              {analysisState.disclaimer}
+            </BodyText>
+          </View>
+        ) : null}
+      </AccessibilityFocusRegion>
     </ScreenContainer>
   );
 }

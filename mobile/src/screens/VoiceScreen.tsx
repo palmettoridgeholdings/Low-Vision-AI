@@ -14,16 +14,27 @@
  * Spoken status narration (mic ready, recording started/stopped,
  * processing, recognized question, failure/retry) goes through
  * useSpokenGuidance rather than raw TTS, so each announcement cancels any
- * still-playing one instead of queuing behind it. Narration is deliberately
- * limited to before recording starts and after it stops — never while
- * `isRecording` is true — so TTS output is never picked up by the
- * microphone mid-recording.
+ * still-playing one instead of queuing behind it — and, per the blind-first
+ * accessibility pass, is automatically delivered as a native TalkBack
+ * announcement instead of on-device TTS whenever a screen reader is active
+ * (see spokenGuidanceController.ts), so this screen doesn't need its own
+ * TalkBack-vs-device-TTS branching. Narration is deliberately limited to
+ * before recording starts and after it stops — never while `isRecording` is
+ * true — so TTS output is never picked up by the microphone mid-recording.
+ *
+ * Accessibility focus follows the same state this screen already tracks:
+ * one AccessibilityFocusRegion wraps the mutually-exclusive
+ * controls/loading/error/success block below, keyed to `flowState.status`,
+ * so a totally blind user's TalkBack focus lands on whichever block just
+ * appeared (recording controls, processing, a result, or a failure) instead
+ * of staying wherever it was before that transition.
  */
 import { AudioModule, RecordingPresets, useAudioRecorder } from "expo-audio";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import {
+  AccessibilityFocusRegion,
   AccessibleButton,
   BodyText,
   Heading,
@@ -193,8 +204,10 @@ export function VoiceScreen() {
   if (permissionState === "needs-request") {
     return (
       <ScreenContainer testID="voice-screen">
-        <Heading>Ask by voice</Heading>
-        <BodyText style={styles.permissionBody}>{MICROPHONE_PERMISSION_CONTEXT}</BodyText>
+        <AccessibilityFocusRegion focusKey="voice-needs-request">
+          <Heading>Ask by voice</Heading>
+          <BodyText style={styles.permissionBody}>{MICROPHONE_PERMISSION_CONTEXT}</BodyText>
+        </AccessibilityFocusRegion>
         <AccessibleButton
           label="Allow microphone access"
           onPress={requestPermission}
@@ -235,49 +248,55 @@ export function VoiceScreen() {
         />
       </View>
 
-      <View style={styles.controls}>
-        {!isRecording ? (
-          <AccessibleButton
-            label="Start recording"
-            leadingGlyph="🎙️"
-            onPress={startRecording}
-            disabled={isBusy}
-            testID="voice-start-recording"
-          />
-        ) : (
-          <>
+      <AccessibilityFocusRegion focusKey={flowState.status} testID="voice-status-region">
+        <View style={styles.controls}>
+          {!isRecording ? (
             <AccessibleButton
-              label="Stop and ask"
-              leadingGlyph="⏹️"
-              variant="danger"
-              onPress={stopRecordingAndAsk}
-              testID="voice-stop-recording"
+              label="Start recording"
+              leadingGlyph="🎙️"
+              onPress={startRecording}
+              disabled={isBusy}
+              testID="voice-start-recording"
             />
-            <AccessibleButton
-              label="Cancel recording"
-              size="secondary"
-              variant="secondary"
-              onPress={cancelRecording}
-              testID="voice-cancel-recording"
-            />
-          </>
-        )}
-      </View>
-
-      {isBusy ? <LoadingState label="Working on your question" /> : null}
-
-      {flowState.status === "error" ? (
-        <RetryableError message={flowState.message} onRetry={startRecording} testID="voice-error" />
-      ) : null}
-
-      {flowState.status === "success" ? (
-        <View style={styles.resultPanel} testID="voice-result-panel">
-          <Heading level={2}>You asked</Heading>
-          <BodyText>{flowState.questionText}</BodyText>
-          <Heading level={2}>Answer</Heading>
-          <BodyText>{flowState.answerText}</BodyText>
+          ) : (
+            <>
+              <AccessibleButton
+                label="Stop and ask"
+                leadingGlyph="⏹️"
+                variant="danger"
+                onPress={stopRecordingAndAsk}
+                testID="voice-stop-recording"
+              />
+              <AccessibleButton
+                label="Cancel recording"
+                size="secondary"
+                variant="secondary"
+                onPress={cancelRecording}
+                testID="voice-cancel-recording"
+              />
+            </>
+          )}
         </View>
-      ) : null}
+
+        {isBusy ? <LoadingState label="Working on your question" /> : null}
+
+        {flowState.status === "error" ? (
+          <RetryableError
+            message={flowState.message}
+            onRetry={startRecording}
+            testID="voice-error"
+          />
+        ) : null}
+
+        {flowState.status === "success" ? (
+          <View style={styles.resultPanel} testID="voice-result-panel">
+            <Heading level={2}>You asked</Heading>
+            <BodyText>{flowState.questionText}</BodyText>
+            <Heading level={2}>Answer</Heading>
+            <BodyText>{flowState.answerText}</BodyText>
+          </View>
+        ) : null}
+      </AccessibilityFocusRegion>
     </ScreenContainer>
   );
 }

@@ -149,14 +149,21 @@ mobile/
 
 Read these before treating the foundation as a finished product:
 
-- **No committed lockfile yet.** An earlier commit on this branch added a
-  `package-lock.json` that was corrupted (not valid JSON/UTF-8) — it has been
-  removed, and this README's setup step reverted from `npm ci` to
-  `npm install` accordingly. Regenerate and commit a real lockfile
-  (`npm install` from a clean `node_modules`, then `git add package-lock.json`)
-  the first time this project is set up somewhere with real npm registry
-  access; this sandbox's network access does not reach `registry.npmjs.org`,
-  so that could not be done here.
+- **No committed lockfile yet.** This has happened twice now: an earlier
+  commit added a corrupted `package-lock.json` (removed, documented here),
+  a later commit on this branch added a real one, and by the time this
+  pass started that file had *itself* become corrupted again — 300KB of
+  binary data, not valid JSON/UTF-8 (`git cat-file -s`/`git show` confirm
+  the corruption is in the committed blob itself, not a checkout artifact
+  of any one environment). It has been removed again, and this README's
+  setup step stays on `npm install` rather than `npm ci` accordingly.
+  Regenerate and commit a real lockfile (`npm install` from a clean
+  `node_modules`, then `git add package-lock.json`, then verify with
+  `node -e "require('./package-lock.json')"` before committing) the next
+  time this project is touched somewhere with real npm registry access —
+  this sandbox's network access does not reach `registry.npmjs.org`, so
+  that could not be done here, and no dependencies changed in this pass
+  that would have required one anyway.
 - **Verification here is static/best-effort, not a full run.** This sandbox
   cannot reach the npm registry, so `npm install`, `expo install --check`,
   Expo Doctor, ESLint, Jest, and a Metro export could not actually be

@@ -1,5 +1,6 @@
 import { Linking, StyleSheet, View } from "react-native";
 
+import { AccessibilityFocusRegion } from "@/components/AccessibilityFocusRegion";
 import { AccessibleButton } from "@/components/AccessibleButton";
 import { BodyText } from "@/components/BodyText";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
@@ -30,27 +31,29 @@ export function PermissionDeniedState({
   useAutoSpeakOnMount(message, true);
 
   return (
-    <View style={styles.container} accessible accessibilityRole="alert" testID={testID}>
-      <BodyText style={styles.text}>{message}</BodyText>
-      <AccessibleButton
-        label="Open device settings"
-        size="secondary"
-        onPress={() => {
-          Linking.openSettings().catch(() => {
-            // If the OS refuses to open settings there is nothing else this
-            // screen can do; the text instructions above still stand.
-          });
-        }}
-      />
-      {onRetry ? (
+    <AccessibilityFocusRegion focusKey={permissionLabel} testID={testID}>
+      <View style={styles.container} accessible accessibilityRole="alert">
+        <BodyText style={styles.text}>{message}</BodyText>
         <AccessibleButton
-          label="Try again"
+          label="Open device settings"
           size="secondary"
-          variant="secondary"
-          onPress={onRetry}
+          onPress={() => {
+            Linking.openSettings().catch(() => {
+              // If the OS refuses to open settings there is nothing else this
+              // screen can do; the text instructions above still stand.
+            });
+          }}
         />
-      ) : null}
-    </View>
+        {onRetry ? (
+          <AccessibleButton
+            label="Try again"
+            size="secondary"
+            variant="secondary"
+            onPress={onRetry}
+          />
+        ) : null}
+      </View>
+    </AccessibilityFocusRegion>
   );
 }
 

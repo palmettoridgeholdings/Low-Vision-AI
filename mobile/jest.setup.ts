@@ -44,3 +44,32 @@ jest.mock("expo-speech", () => ({
   stop: jest.fn().mockResolvedValue(undefined),
   isSpeakingAsync: jest.fn().mockResolvedValue(false),
 }));
+
+// react-native's own AccessibilityInfo native module, mocked at its internal
+// path so `import { AccessibilityInfo } from "react-native"` (used
+// throughout the blind-first accessibility pass) resolves to this mock
+// without mocking the rest of the "react-native" package. Defaults to "no
+// screen reader" so every test written before screen-reader detection
+// existed keeps exercising the same on-device-TTS path it always has;
+// __emitScreenReaderChanged lets a test simulate TalkBack being toggled on
+// or off, the same way the netinfo mock above lets tests simulate
+// connectivity changes.
+jest.mock("react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo", () => {
+  const mockAccessibilityListeners = new Set();
+  const mockAccessibilityInfo = {
+    isScreenReaderEnabled: jest.fn().mockResolvedValue(false),
+    addEventListener: jest.fn((_eventName, handler) => {
+      mockAccessibilityListeners.add(handler);
+      return { remove: jest.fn(() => mockAccessibilityListeners.delete(handler)) };
+    }),
+    announceForAccessibility: jest.fn(),
+    setAccessibilityFocus: jest.fn(),
+    fetch: jest.fn().mockResolvedValue(false),
+    // @ts-expect-error Type annotations inside a hoisted Jest factory are rejected by Babel.
+    __emitScreenReaderChanged: (screenReaderEnabled) => {
+      // @ts-expect-error The untyped Set is intentional for the hoisted Jest factory.
+      mockAccessibilityListeners.forEach((handler) => handler(screenReaderEnabled));
+    },
+  };
+  return { __esModule: true, default: mockAccessibilityInfo, ...mockAccessibilityInfo };
+});
