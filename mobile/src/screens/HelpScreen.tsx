@@ -1,13 +1,8 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
-import {
-  AccessibilityFocusRegion,
-  AccessibilitySettingsButton,
-  AccessibleButton,
-  BodyText,
-  Heading,
-} from "@/components";
+import { AccessibilitySettingsButton, AccessibleButton, BodyText, Heading } from "@/components";
 import { ScreenContainer } from "@/components/ScreenContainer";
+import { useAccessibilityFocusRef } from "@/hooks/useAccessibilityFocusRef";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { useSpeech } from "@/hooks/useSpeech";
 import { HELP_MESSAGE } from "@/constants/onboardingCopy";
@@ -28,13 +23,12 @@ const FULL_HELP_SPEECH = `${HELP_MESSAGE} ${TALKBACK_HELP_SECTION}`;
 export function HelpScreen() {
   const { speak } = useSpeech();
   useAutoSpeakOnMount(FULL_HELP_SPEECH, true);
+  const headingRef = useAccessibilityFocusRef<Text>("help-mount");
 
   return (
     <ScreenContainer scroll testID="help-screen">
-      <AccessibilityFocusRegion focusKey="help-mount">
-        <Heading>Help</Heading>
-        <BodyText style={styles.body}>{HELP_MESSAGE}</BodyText>
-      </AccessibilityFocusRegion>
+      <Heading ref={headingRef}>Help</Heading>
+      <BodyText style={styles.body}>{HELP_MESSAGE}</BodyText>
       <BodyText secondary style={styles.body}>
         This app is assistive software, not a navigation or safety system. A single photo cannot
         establish that a route, object, or medication is safe — verify anything uncertain with a

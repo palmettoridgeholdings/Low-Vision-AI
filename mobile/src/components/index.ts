@@ -1,4 +1,3 @@
-export * from "./AccessibilityFocusRegion";
 export * from "./AccessibilitySettingsButton";
 export * from "./AccessibleButton";
 export * from "./AccessibleToggle";

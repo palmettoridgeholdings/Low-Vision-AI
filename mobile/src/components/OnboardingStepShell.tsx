@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { AccessibilityFocusRegion } from "@/components/AccessibilityFocusRegion";
 import { AccessibleButton } from "@/components/AccessibleButton";
 import { BodyText } from "@/components/BodyText";
 import { Heading } from "@/components/Heading";
 import { ScreenContainer } from "@/components/ScreenContainer";
+import { useAccessibilityFocusRef } from "@/hooks/useAccessibilityFocusRef";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { useSpokenGuidance } from "@/hooks/useSpokenGuidance";
 import { colors } from "@/theme/colors";
@@ -66,6 +66,8 @@ export function OnboardingStepShell({
   // Hide a stale validation message as soon as the selection becomes valid.
   // Deriving this avoids a synchronous state update inside an effect.
   const visibleErrorMessage = canContinue ? null : errorMessage;
+  const headingRef = useAccessibilityFocusRef<Text>(heading);
+  const errorRef = useAccessibilityFocusRef<Text>(visibleErrorMessage);
 
   const handleContinue = () => {
     if (!canContinue) {
@@ -80,10 +82,8 @@ export function OnboardingStepShell({
 
   return (
     <ScreenContainer scroll testID={testID}>
-      <AccessibilityFocusRegion focusKey={heading}>
-        <Heading>{heading}</Heading>
-        <BodyText style={styles.prompt}>{prompt}</BodyText>
-      </AccessibilityFocusRegion>
+      <Heading ref={headingRef}>{heading}</Heading>
+      <BodyText style={styles.prompt}>{prompt}</BodyText>
       <View style={styles.speechControls}>
         <AccessibleButton
           label="Repeat this instruction"
@@ -106,16 +106,15 @@ export function OnboardingStepShell({
       <View style={styles.content}>{children}</View>
 
       {visibleErrorMessage ? (
-        <AccessibilityFocusRegion focusKey={visibleErrorMessage}>
-          <BodyText
-            accessibilityRole="alert"
-            accessibilityLiveRegion="assertive"
-            style={styles.error}
-            testID="onboarding-validation-error"
-          >
-            {visibleErrorMessage}
-          </BodyText>
-        </AccessibilityFocusRegion>
+        <BodyText
+          ref={errorRef}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+          style={styles.error}
+          testID="onboarding-validation-error"
+        >
+          {visibleErrorMessage}
+        </BodyText>
       ) : null}
 
       <View style={styles.footer}>

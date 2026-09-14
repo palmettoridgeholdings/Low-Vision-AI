@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { StyleSheet, Text } from "react-native";
 
 import { colors } from "@/theme/colors";
@@ -13,10 +14,18 @@ export interface HeadingProps {
  * A screen or section heading, exposed to assistive tech as an actual
  * header (accessibilityRole="header") so TalkBack/VoiceOver users can jump
  * between sections instead of reading everything linearly.
+ *
+ * Forwards its ref to the underlying, already-accessible Text node so a
+ * caller (see useAccessibilityFocusRef) can command TalkBack focus directly
+ * onto this real, labeled element instead of a synthetic wrapper view.
  */
-export function Heading({ children, level = 1, testID }: HeadingProps) {
+export const Heading = forwardRef<Text, HeadingProps>(function Heading(
+  { children, level = 1, testID },
+  ref,
+) {
   return (
     <Text
+      ref={ref}
       accessibilityRole="header"
       testID={testID}
       style={level === 1 ? styles.level1 : styles.level2}
@@ -24,7 +33,7 @@ export function Heading({ children, level = 1, testID }: HeadingProps) {
       {children}
     </Text>
   );
-}
+});
 
 const styles = StyleSheet.create({
   level1: {

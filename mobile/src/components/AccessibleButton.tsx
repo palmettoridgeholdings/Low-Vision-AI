@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
 
 import { colors } from "@/theme/colors";
@@ -27,17 +27,24 @@ export interface AccessibleButtonProps {
  * The one button component every screen should use. Centralizes touch-target
  * size, color contrast, a visible keyboard focus ring, and correct
  * accessibility role/label/state so individual screens can't regress those.
+ *
+ * Forwards its ref to the underlying Pressable (a real, already-accessible
+ * button node) — see Heading.tsx for why this matters for accessibility
+ * focus.
  */
-export function AccessibleButton({
-  label,
-  onPress,
-  hint,
-  variant = "primary",
-  size = "primary",
-  disabled = false,
-  leadingGlyph,
-  testID,
-}: AccessibleButtonProps) {
+export const AccessibleButton = forwardRef<View, AccessibleButtonProps>(function AccessibleButton(
+  {
+    label,
+    onPress,
+    hint,
+    variant = "primary",
+    size = "primary",
+    disabled = false,
+    leadingGlyph,
+    testID,
+  },
+  ref,
+) {
   const [isFocused, setIsFocused] = useState(false);
 
   const height = size === "primary" ? PRIMARY_CONTROL_HEIGHT : MIN_TOUCH_TARGET;
@@ -59,6 +66,7 @@ export function AccessibleButton({
 
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={hint}
@@ -89,7 +97,7 @@ export function AccessibleButton({
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   base: {

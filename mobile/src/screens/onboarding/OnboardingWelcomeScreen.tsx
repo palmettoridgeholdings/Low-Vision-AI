@@ -1,15 +1,10 @@
 import { useRouter } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import {
-  AccessibilityFocusRegion,
-  AccessibilitySettingsButton,
-  AccessibleButton,
-  BodyText,
-  Heading,
-} from "@/components";
+import { AccessibilitySettingsButton, AccessibleButton, BodyText, Heading } from "@/components";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { applyRecommendedBlindDefaults, chooseSetupRoute } from "@/state/appStateStore";
+import { useAccessibilityFocusRef } from "@/hooks/useAccessibilityFocusRef";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { useScreenReaderStatus } from "@/hooks/useScreenReaderStatus";
 import { useSpokenGuidance } from "@/hooks/useSpokenGuidance";
@@ -45,6 +40,7 @@ export function OnboardingWelcomeScreen() {
   const introMessage = getOnboardingWelcomeMessage(screenReaderStatus);
 
   useAutoSpeakOnMount(introMessage, screenReaderStatus !== "unknown");
+  const headingRef = useAccessibilityFocusRef<Text>("onboarding-welcome-mount");
 
   const useRecommendedBlindSettings = () => {
     applyRecommendedBlindDefaults();
@@ -63,10 +59,8 @@ export function OnboardingWelcomeScreen() {
 
   return (
     <ScreenContainer scroll testID="onboarding-welcome-screen">
-      <AccessibilityFocusRegion focusKey="onboarding-welcome-mount">
-        <Heading>Welcome to Access AI</Heading>
-        <BodyText style={styles.body}>{introMessage}</BodyText>
-      </AccessibilityFocusRegion>
+      <Heading ref={headingRef}>Welcome to Access AI</Heading>
+      <BodyText style={styles.body}>{introMessage}</BodyText>
 
       <View style={styles.actions}>
         <AccessibleButton

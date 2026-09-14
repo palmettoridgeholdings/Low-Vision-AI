@@ -23,18 +23,18 @@
  * true — so TTS output is never picked up by the microphone mid-recording.
  *
  * Accessibility focus follows the same state this screen already tracks:
- * one AccessibilityFocusRegion wraps the mutually-exclusive
- * controls/loading/error/success block below, keyed to `flowState.status`,
- * so a totally blind user's TalkBack focus lands on whichever block just
- * appeared (recording controls, processing, a result, or a failure) instead
- * of staying wherever it was before that transition.
+ * a shared ref (see useAccessibilityFocusRef) is attached to whichever real
+ * element is the meaningful new content for the current `flowState.status`
+ * — the Start button, the Stop button, the loading indicator, the error, or
+ * the result heading — so a totally blind user's TalkBack focus lands on
+ * that element (never a synthetic wrapper) whenever the status changes,
+ * instead of staying wherever it was before that transition.
  */
 import { AudioModule, RecordingPresets, useAudioRecorder } from "expo-audio";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import {
-  AccessibilityFocusRegion,
   AccessibleButton,
   BodyText,
   Heading,
@@ -44,6 +44,7 @@ import {
   RetryableError,
 } from "@/components";
 import { ScreenContainer } from "@/components/ScreenContainer";
+import { useAccessibilityFocusRef } from "@/hooks/useAccessibilityFocusRef";
 import { useAnswerSpeech } from "@/hooks/useAnswerSpeech";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
@@ -103,6 +104,15 @@ export function VoiceScreen() {
     VOICE_MIC_READY_MESSAGE,
     permissionState === "granted" && flowState.status === "idle",
   );
+  // Declared unconditionally (Rules of Hooks) even though the elements they
+  // attach to only exist on some branches below.
+  const permissionHeadingRef = useAccessibilityFocusRef<Text>("voice-needs-request");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shared
+  // across several mutually-exclusive elements of different native types
+  // (AccessibleButton/LoadingState/RetryableError's View, the result
+  // heading's Text) depending on which one is the meaningful new content
+  // for the current flowState.status.
+  const statusRef = useAccessibilityFocusRef<any>(flowState.status);
 
   // Best-effort safety net: if the screen is left mid-recording (Back,
   // navigating elsewhere), stop the recorder rather than leaving it running
@@ -204,10 +214,8 @@ export function VoiceScreen() {
   if (permissionState === "needs-request") {
     return (
       <ScreenContainer testID="voice-screen">
-        <AccessibilityFocusRegion focusKey="voice-needs-request">
-          <Heading>Ask by voice</Heading>
-          <BodyText style={styles.permissionBody}>{MICROPHONE_PERMISSION_CONTEXT}</BodyText>
-        </AccessibilityFocusRegion>
+        <Heading ref={permissionHeadingRef}>Ask by voice</Heading>
+        <BodyText style={styles.permissionBody}>{MICROPHONE_PERMISSION_CONTEXT}</BodyText>
         <AccessibleButton
           label="Allow microphone access"
           onPress={requestPermission}
@@ -248,55 +256,58 @@ export function VoiceScreen() {
         />
       </View>
 
-      <AccessibilityFocusRegion focusKey={flowState.status} testID="voice-status-region">
-        <View style={styles.controls}>
-          {!isRecording ? (
-            <AccessibleButton
-              label="Start recording"
-              leadingGlyph="🎙️"
-              onPress={startRecording}
-              disabled={isBusy}
-              testID="voice-start-recording"
-            />
-          ) : (
-            <>
-              <AccessibleButton
-                label="Stop and ask"
-                leadingGlyph="⏹️"
-                variant="danger"
-                onPress={stopRecordingAndAsk}
-                testID="voice-stop-recording"
-              />
-              <AccessibleButton
-                label="Cancel recording"
-                size="secondary"
-                variant="secondary"
-                onPress={cancelRecording}
-                testID="voice-cancel-recording"
-              />
-            </>
-          )}
-        </View>
-
-        {isBusy ? <LoadingState label="Working on your question" /> : null}
-
-        {flowState.status === "error" ? (
-          <RetryableError
-            message={flowState.message}
-            onRetry={startRecording}
-            testID="voice-error"
+      <View style={styles.controls}>
+        {!isRecording ? (
+          <AccessibleButton
+            ref={flowState.status === "idle" ? statusRef : undefined}
+            label="Start recording"
+            leadingGlyph="🎙️"
+            onPress={startRecording}
+            disabled={isBusy}
+            testID="voice-start-recording"
           />
-        ) : null}
+        ) : (
+          <>
+            <AccessibleButton
+              ref={statusRef}
+              label="Stop and ask"
+              leadingGlyph="⏹️"
+              variant="danger"
+              onPress={stopRecordingAndAsk}
+              testID="voice-stop-recording"
+            />
+            <AccessibleButton
+              label="Cancel recording"
+              size="secondary"
+              variant="secondary"
+              onPress={cancelRecording}
+              testID="voice-cancel-recording"
+            />
+          </>
+        )}
+      </View>
 
-        {flowState.status === "success" ? (
-          <View style={styles.resultPanel} testID="voice-result-panel">
-            <Heading level={2}>You asked</Heading>
-            <BodyText>{flowState.questionText}</BodyText>
-            <Heading level={2}>Answer</Heading>
-            <BodyText>{flowState.answerText}</BodyText>
-          </View>
-        ) : null}
-      </AccessibilityFocusRegion>
+      {isBusy ? <LoadingState ref={statusRef} label="Working on your question" /> : null}
+
+      {flowState.status === "error" ? (
+        <RetryableError
+          ref={statusRef}
+          message={flowState.message}
+          onRetry={startRecording}
+          testID="voice-error"
+        />
+      ) : null}
+
+      {flowState.status === "success" ? (
+        <View style={styles.resultPanel} testID="voice-result-panel">
+          <Heading ref={statusRef} level={2}>
+            You asked
+          </Heading>
+          <BodyText>{flowState.questionText}</BodyText>
+          <Heading level={2}>Answer</Heading>
+          <BodyText>{flowState.answerText}</BodyText>
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }

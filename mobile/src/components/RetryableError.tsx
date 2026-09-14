@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AccessibleButton } from "@/components/AccessibleButton";
@@ -15,10 +16,23 @@ export interface RetryableErrorProps {
 /**
  * Generic recoverable-error state: announced immediately (assertive live
  * region) and paired with a single, obvious retry action.
+ *
+ * Forwards its ref to the outer, already-accessible View (accessible,
+ * role="alert") — see Heading.tsx for why this matters for accessibility
+ * focus. Note: this container's `accessible` merges the message and the
+ * nested "Try again" button into one accessibility node, which is
+ * appropriate for announcing the error but also means "Try again" is not
+ * independently reachable by swipe navigation — a pre-existing tradeoff of
+ * this component predating this change, left as-is here since it is not
+ * caused by, or in scope for, the focus fix.
  */
-export function RetryableError({ message, onRetry, testID }: RetryableErrorProps) {
+export const RetryableError = forwardRef<View, RetryableErrorProps>(function RetryableError(
+  { message, onRetry, testID },
+  ref,
+) {
   return (
     <View
+      ref={ref}
       style={styles.container}
       accessible
       accessibilityRole="alert"
@@ -29,7 +43,7 @@ export function RetryableError({ message, onRetry, testID }: RetryableErrorProps
       <AccessibleButton label="Try again" size="secondary" onPress={onRetry} />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

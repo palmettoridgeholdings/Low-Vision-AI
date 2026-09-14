@@ -1,9 +1,8 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useCallback, useRef, useState } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import {
-  AccessibilityFocusRegion,
   AccessibleButton,
   BodyText,
   ChoiceList,
@@ -14,6 +13,7 @@ import {
   RetryableError,
 } from "@/components";
 import { ScreenContainer } from "@/components/ScreenContainer";
+import { useAccessibilityFocusRef } from "@/hooks/useAccessibilityFocusRef";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useSpokenGuidance } from "@/hooks/useSpokenGuidance";
@@ -80,6 +80,13 @@ export function CameraScreen() {
     buildCameraReadyMessage(MODE_LABELS[mode]),
     !!permission?.granted && analysisState.status === "idle",
   );
+  // Declared unconditionally (Rules of Hooks) even though the elements they
+  // attach to only exist on some branches below.
+  const permissionHeadingRef = useAccessibilityFocusRef<Text>("camera-needs-request");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shared
+  // across three mutually-exclusive result elements of different native
+  // types (LoadingState/RetryableError's View, the result Heading's Text).
+  const statusRef = useAccessibilityFocusRef<any>(analysisState.status);
 
   const capture = useCallback(async () => {
     if (!cameraRef.current) {
@@ -132,10 +139,8 @@ export function CameraScreen() {
     }
     return (
       <ScreenContainer testID="camera-screen">
-        <AccessibilityFocusRegion focusKey="camera-needs-request">
-          <Heading>Camera assistance</Heading>
-          <BodyText style={styles.permissionBody}>{CAMERA_PERMISSION_CONTEXT}</BodyText>
-        </AccessibilityFocusRegion>
+        <Heading ref={permissionHeadingRef}>Camera assistance</Heading>
+        <BodyText style={styles.permissionBody}>{CAMERA_PERMISSION_CONTEXT}</BodyText>
         <AccessibleButton
           label="Allow camera access"
           onPress={() => void requestPermission()}
@@ -206,27 +211,30 @@ export function CameraScreen() {
         testID="camera-capture"
       />
 
-      <AccessibilityFocusRegion focusKey={analysisState.status} testID="camera-status-region">
-        {analysisState.status === "analyzing" ? <LoadingState label="Analyzing photo" /> : null}
+      {analysisState.status === "analyzing" ? (
+        <LoadingState ref={statusRef} label="Analyzing photo" />
+      ) : null}
 
-        {analysisState.status === "error" ? (
-          <RetryableError
-            message={analysisState.message}
-            onRetry={capture}
-            testID="camera-error"
-          />
-        ) : null}
+      {analysisState.status === "error" ? (
+        <RetryableError
+          ref={statusRef}
+          message={analysisState.message}
+          onRetry={capture}
+          testID="camera-error"
+        />
+      ) : null}
 
-        {analysisState.status === "success" ? (
-          <View style={styles.resultPanel} testID="camera-result-panel">
-            <Heading level={2}>Result</Heading>
-            <BodyText>{analysisState.description}</BodyText>
-            <BodyText secondary style={styles.disclaimer}>
-              {analysisState.disclaimer}
-            </BodyText>
-          </View>
-        ) : null}
-      </AccessibilityFocusRegion>
+      {analysisState.status === "success" ? (
+        <View style={styles.resultPanel} testID="camera-result-panel">
+          <Heading ref={statusRef} level={2}>
+            Result
+          </Heading>
+          <BodyText>{analysisState.description}</BodyText>
+          <BodyText secondary style={styles.disclaimer}>
+            {analysisState.disclaimer}
+          </BodyText>
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }

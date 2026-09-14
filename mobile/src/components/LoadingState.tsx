@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { BodyText } from "@/components/BodyText";
@@ -13,10 +14,18 @@ export interface LoadingStateProps {
 /**
  * In-progress indicator. Announces itself once via a polite live region and
  * marks the region busy, instead of relying on a purely visual spinner.
+ *
+ * Forwards its ref to the outer, already-accessible View (accessible,
+ * role="progressbar", labeled) — see Heading.tsx for why this matters for
+ * accessibility focus.
  */
-export function LoadingState({ label, testID }: LoadingStateProps) {
+export const LoadingState = forwardRef<View, LoadingStateProps>(function LoadingState(
+  { label, testID },
+  ref,
+) {
   return (
     <View
+      ref={ref}
       style={styles.container}
       accessible
       accessibilityRole="progressbar"
@@ -29,7 +38,7 @@ export function LoadingState({ label, testID }: LoadingStateProps) {
       <BodyText style={styles.label}>{label}</BodyText>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

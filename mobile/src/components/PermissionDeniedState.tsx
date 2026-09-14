@@ -1,8 +1,8 @@
 import { Linking, StyleSheet, View } from "react-native";
 
-import { AccessibilityFocusRegion } from "@/components/AccessibilityFocusRegion";
 import { AccessibleButton } from "@/components/AccessibleButton";
 import { BodyText } from "@/components/BodyText";
+import { useAccessibilityFocusRef } from "@/hooks/useAccessibilityFocusRef";
 import { useAutoSpeakOnMount } from "@/hooks/useAutoSpeakOnMount";
 import { spacing } from "@/theme/spacing";
 
@@ -29,31 +29,36 @@ export function PermissionDeniedState({
 }: PermissionDeniedStateProps) {
   const message = `Access AI does not have permission to use the ${permissionLabel}. Open your device settings to allow it, then come back and try again.`;
   useAutoSpeakOnMount(message, true);
+  const containerRef = useAccessibilityFocusRef<View>(permissionLabel);
 
   return (
-    <AccessibilityFocusRegion focusKey={permissionLabel} testID={testID}>
-      <View style={styles.container} accessible accessibilityRole="alert">
-        <BodyText style={styles.text}>{message}</BodyText>
+    <View
+      ref={containerRef}
+      style={styles.container}
+      accessible
+      accessibilityRole="alert"
+      testID={testID}
+    >
+      <BodyText style={styles.text}>{message}</BodyText>
+      <AccessibleButton
+        label="Open device settings"
+        size="secondary"
+        onPress={() => {
+          Linking.openSettings().catch(() => {
+            // If the OS refuses to open settings there is nothing else this
+            // screen can do; the text instructions above still stand.
+          });
+        }}
+      />
+      {onRetry ? (
         <AccessibleButton
-          label="Open device settings"
+          label="Try again"
           size="secondary"
-          onPress={() => {
-            Linking.openSettings().catch(() => {
-              // If the OS refuses to open settings there is nothing else this
-              // screen can do; the text instructions above still stand.
-            });
-          }}
+          variant="secondary"
+          onPress={onRetry}
         />
-        {onRetry ? (
-          <AccessibleButton
-            label="Try again"
-            size="secondary"
-            variant="secondary"
-            onPress={onRetry}
-          />
-        ) : null}
-      </View>
-    </AccessibilityFocusRegion>
+      ) : null}
+    </View>
   );
 }
 
