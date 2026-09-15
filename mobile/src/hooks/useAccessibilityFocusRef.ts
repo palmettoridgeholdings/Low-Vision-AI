@@ -36,8 +36,8 @@ import { focusAccessibilityNode } from "@/utils/accessibilityFocus";
  * each of them — whichever one is actually mounted when `focusKey` changes
  * is the one that receives focus.
  */
-export function useAccessibilityFocusRef<T>(focusKey: unknown): RefObject<T> {
-  const ref = useRef<T>(null);
+export function useAccessibilityFocusRef<T>(focusKey: unknown): RefObject<T | null> {
+  const ref = useRef<T | null>(null);
 
   useEffect(() => {
     focusAccessibilityNode(ref);

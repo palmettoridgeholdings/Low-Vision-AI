@@ -17,6 +17,13 @@ open item until someone checks it off on real hardware.
 1. Install the app on a physical Android phone (Expo Go, or a built APK —
    see `mobile/README.md`).
 2. Settings → Accessibility → TalkBack → on.
+
+   TalkBack may announce font sizes, colors, text formatting, and image or
+   container details depending on its Verbosity settings. For a cleaner
+   Access AI voice-first experience, users may optionally disable **TalkBack
+   → Settings → Verbosity → Speak text formatting**. These announcements are
+   optional Android/TalkBack behavior, not an Access AI defect.
+
 3. **Turn the screen off, or otherwise commit to not looking at it, for the
    whole test** (Parts 0–7). If a step cannot be completed this way, that
    step fails — note exactly where and how (which control couldn't be

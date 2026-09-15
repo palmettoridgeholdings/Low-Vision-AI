@@ -50,15 +50,12 @@ describe("useAccessibilityFocusRef", () => {
   });
 
   it("passes a ref whose current value is the real rendered element, not a wrapper", () => {
-    let capturedRef: { current: unknown } | undefined;
-    function CaptureProbe() {
-      const ref = useAccessibilityFocusRef<Text>("mount");
-      capturedRef = ref;
-      return <Text ref={ref}>Real element</Text>;
-    }
+    render(<Probe focusKey="mount" label="Real element" />);
 
-    render(<CaptureProbe />);
-
-    expect(capturedRef?.current).not.toBeNull();
+    const focusedRef = (focusAccessibilityNode as jest.Mock).mock.calls[0]?.[0] as
+      | { current: unknown }
+      | undefined;
+    expect(focusedRef).toBeDefined();
+    expect(focusedRef?.current).not.toBeNull();
   });
 });
