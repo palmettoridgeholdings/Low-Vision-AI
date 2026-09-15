@@ -5,10 +5,31 @@ TypeScript. This is the MVP scaffold described in the repository root
 README's "Native Android is the primary mobile product direction" note — it
 does not replace or touch the Streamlit prototype at the repository root.
 
-**Status: foundation, not a finished product.** It runs entirely in a safe
-mock mode by default (no backend, no network calls, no AI service) so it can
-be built, run, and tested with zero external accounts. See "Known
-limitations" below before treating anything here as verified.
+**Status: active Android MVP foundation.** The app runs in safe mock mode by
+default (no backend, no network calls, no AI service) so the accessibility,
+onboarding, voice/camera flow, and TalkBack behavior can be developed and
+tested without external accounts.
+
+## Current validated checkpoint — September 14, 2026
+
+- Physical Android/TalkBack testing passed for the current onboarding/focus
+  behavior.
+- TalkBack focus now targets real accessible elements rather than synthetic
+  wrapper views.
+- Final accessibility cleanup baseline: commit
+  `7a9dcd208e963c1cab40c89f8726f9befa69e585` on
+  `codex/android-mvp-foundation`.
+- Local verification passed: `npm ci`, TypeScript, ESLint (3 existing warnings
+  only), 24 Jest suites / 118 tests, and `git diff --check`.
+- `package-lock.json` was regenerated locally as a valid lockfile v3 after a
+  previously committed binary-corrupt lockfile was discovered.
+- Extra TalkBack announcements such as colors, font sizes, and pixel-style
+  formatting were confirmed to come from TalkBack's optional
+  **Settings → Verbosity → Speak text formatting** feature. Turning that
+  option off removes the extra chatter. Access AI should not suppress a
+  user-selected TalkBack verbosity feature in runtime code.
+- Next engineering target: make startup speech begin immediately and reliably
+  when the app opens without regressing TalkBack coexistence or focus.
 
 ## What's here
 
@@ -27,22 +48,18 @@ limitations" below before treating anything here as verified.
 
 ## Prerequisites (Windows)
 
-- **Node.js 20 LTS or newer** and npm — <https://nodejs.org>
-- **Git** (already required for the rest of this repo)
+- **Node.js 20 or newer** and npm — <https://nodejs.org>
+- **Git**
 - One of:
-  - **Expo Go** app on a physical Android phone (fastest way to run this),
-    or
-  - **Android Studio** with an Android Virtual Device (AVD) set up, for an
-    emulator, or
-  - A JDK (17) and the Android SDK on PATH, only if you intend to run a
-    local Gradle build (`npm run build:android:local`) instead of Expo's
-    own tooling.
+  - **Expo Go** on a physical Android phone, or
+  - **Android Studio** with an Android Virtual Device, or
+  - A JDK 17 + Android SDK for local Gradle builds.
 
 ## Setup (Windows PowerShell)
 
 ```powershell
 cd mobile
-npm install
+npm ci
 
 # Confirm the installed dependency set matches Expo SDK 57:
 npx expo install --check
@@ -50,6 +67,9 @@ npx expo install --check
 # Optional: only needed once you have a real backend to point at.
 # Copy .env.example .env
 ```
+
+Use `npm install` only when intentionally changing dependencies or regenerating
+the lockfile. Normal reproducible setup should use `npm ci`.
 
 ## Run it
 
@@ -60,11 +80,9 @@ npm run start
 This opens Expo's dev tools. From there:
 
 - Press `a` to launch on a connected Android emulator, or
-- Scan the QR code with the **Expo Go** app on a physical Android phone
-  (fastest path, no Android Studio required).
+- Scan the QR code with the **Expo Go** app on a physical Android phone.
 
-Direct Android shortcut (starts the dev server and opens an emulator/device
-if one is already connected):
+Direct Android shortcut:
 
 ```powershell
 npm run android
@@ -73,19 +91,19 @@ npm run android
 ## Test, lint, typecheck, format
 
 ```powershell
-npm test              # jest (jest-expo preset)
-npm run test:ci        # jest with coverage, CI-style output
-npm run lint           # eslint . (flat config, eslint-config-expo)
-npm run typecheck      # tsc --noEmit
-npm run format         # prettier --check .
-npm run format:write   # prettier --write .
+npm test
+npm run test:ci
+npm run lint
+npm run typecheck
+npm run format
+npm run format:write
 ```
 
 ## Building an installable Android package
 
 Two supported paths:
 
-**A. EAS Build (cloud, recommended)** — requires a free Expo account:
+**A. EAS Build (cloud, recommended)**
 
 ```powershell
 npm install -g eas-cli
@@ -93,100 +111,81 @@ eas login
 eas build --platform android --profile preview
 ```
 
-`eas.json` already defines `development`, `preview`, and `production`
-profiles (`preview` builds an installable `.apk`; `production` builds an
-`.aab` for the Play Store).
+`eas.json` defines `development`, `preview`, and `production` profiles.
 
-**B. Local Gradle build** — requires Android Studio's SDK + a JDK 17 on
-PATH:
+**B. Local Gradle build**
 
 ```powershell
 npm run build:android:local
 ```
 
-This runs `expo prebuild --platform android` (generates the native
-`android/` project — gitignored, regenerate anytime) followed by
-`gradlew.bat assembleRelease`. The signed/unsigned release APK lands under
-`android\app\build\outputs\apk\release\`.
+This runs `expo prebuild --platform android` followed by
+`gradlew.bat assembleRelease`.
 
 ## Environment variables
 
 See `.env.example`. Only two variables exist, both optional, and neither is
 a secret:
 
-- `EXPO_PUBLIC_BACKEND_BASE_URL` — your backend's base URL. Leave blank to
-  stay in mock mode.
-- `EXPO_PUBLIC_MOCK_MODE` — defaults to safe mock mode. Set to `false` (and
-  set the base URL above) once you have a real backend to test against.
+- `EXPO_PUBLIC_BACKEND_BASE_URL` — backend base URL. Leave blank for mock mode.
+- `EXPO_PUBLIC_MOCK_MODE` — defaults to safe mock mode. Set to `false` only
+  when intentionally testing a real backend.
 
-Every `EXPO_PUBLIC_*` variable is compiled into the client bundle — never
-put an API key or other credential in one. This app has none: no OpenAI key
-or other credential is embedded anywhere in the client. All AI-backed
-features are designed to call your own backend, which holds real
-credentials server-side.
+Every `EXPO_PUBLIC_*` variable is compiled into the client bundle. Never put
+an API key or other credential in one.
 
 ## Project structure
 
 ```text
 mobile/
-  app/                     Expo Router routes (thin — render src/screens/*)
+  app/                     Expo Router routes
     onboarding/            Onboarding step routes
   src/
-    screens/               Actual screen components (unit-testable directly)
-    components/            Shared accessible UI (AccessibleButton, ChoiceList, ...)
-    theme/                 Colors, spacing, typography, touch-target sizes
+    screens/               Screen components
+    components/            Shared accessible UI
+    theme/                 Colors, spacing, typography, touch targets
     services/              Typed service interfaces + mock/remote implementations
-    state/                 appStateStore (persisted onboarding+settings), lastAnswerStore
-    hooks/                 useSpeech, useStartupSpeech, useAnswerSpeech, ...
+    state/                 Persisted onboarding/settings + answer state
+    hooks/                 Speech, startup speech, accessibility focus, etc.
     types/                 Onboarding + service domain types
-    constants/             Onboarding/help copy (spoken + visual)
-    utils/                 storage.ts (AsyncStorage wrapper), createStore.ts
+    constants/             Onboarding/help copy
+    utils/                 Storage, stores, accessibility utilities
   __tests__/               Jest + @testing-library/react-native
-  docs -> ../docs/ANDROID_MVP_ARCHITECTURE.md (repository docs/ folder)
 ```
+
+## TalkBack notes
+
+The app is designed to coexist with TalkBack rather than replace it. Standard
+TalkBack exploration/swipe/double-tap behavior should remain intact.
+
+If TalkBack announces colors, font sizes, or other formatting details that are
+not useful for your workflow, check:
+
+**TalkBack → Settings → Verbosity → Speak text formatting**
+
+That is an Android/TalkBack user preference, not an Access AI defect. See
+`docs/TALKBACK_TEST_SCRIPT.md` for the current physical-device test procedure.
 
 ## Known limitations
 
-Read these before treating the foundation as a finished product:
+- **Startup speech latency remains the next priority.** Speech works, but the
+  next pass should make the first spoken guidance begin immediately and
+  reliably when the app opens.
+- **No Gradle APK is the current validation artifact.** The current checkpoint
+  was tested through Expo/Metro on a physical Android phone.
+- **Camera/voice/question backends remain mock-only.** Remote service stubs
+  exist, but production backend integration is not complete.
+- **Placeholder icon/splash assets remain.** Replace before store submission.
+- **Physical TalkBack testing is required after future accessibility changes.**
+  Automated tests cover semantics and focus logic, but cannot prove actual
+  touch exploration or spoken behavior on a device.
 
-- **No committed lockfile yet.** This has happened twice now: an earlier
-  commit added a corrupted `package-lock.json` (removed, documented here),
-  a later commit on this branch added a real one, and by the time this
-  pass started that file had *itself* become corrupted again — 300KB of
-  binary data, not valid JSON/UTF-8 (`git cat-file -s`/`git show` confirm
-  the corruption is in the committed blob itself, not a checkout artifact
-  of any one environment). It has been removed again, and this README's
-  setup step stays on `npm install` rather than `npm ci` accordingly.
-  Regenerate and commit a real lockfile (`npm install` from a clean
-  `node_modules`, then `git add package-lock.json`, then verify with
-  `node -e "require('./package-lock.json')"` before committing) the next
-  time this project is touched somewhere with real npm registry access —
-  this sandbox's network access does not reach `registry.npmjs.org`, so
-  that could not be done here, and no dependencies changed in this pass
-  that would have required one anyway.
-- **Verification here is static/best-effort, not a full run.** This sandbox
-  cannot reach the npm registry, so `npm install`, `expo install --check`,
-  Expo Doctor, ESLint, Jest, and a Metro export could not actually be
-  executed for this change; TypeScript's compiler API was used directly
-  (bypassing `npm`) for a best-effort type/syntax check instead. Run the full
-  `npm test` / `npm run lint` / `npm run typecheck` / Metro export locally
-  before merging — see "Test, lint, typecheck, format" above.
-- **No Gradle APK yet.** Native generation succeeds, but the verification
-  environment could not download the Gradle distribution. Build locally or
-  with EAS before installing the app.
-- **Voice and server-audio need device testing.** Their Expo SDK 57 APIs pass
-  typechecking and bundling, but microphone lifecycle, interruption, and
-  playback still require a real Android device.
-- **Camera/voice/question backends are mock-only.** `src/services/**/remote*.ts`
-  sketches the intended real HTTP calls (`/v1/ask`, `/v1/transcribe`,
-  `/v1/analyze-image`) but there is no real backend to test them against
-  yet, and they have not been exercised at all.
-- **Placeholder icon/splash assets.** `assets/*.png` are solid-color
-  placeholders generated for this commit, not real branding. Replace before
-  any store submission.
-- **No physical TalkBack pass yet.** Semantics (roles, labels, states,
-  focus order) were written to the letter of
-  `docs/BLIND_FIRST_ONBOARDING_SPEC.md` and Android's touch-target
-  guidance, but only a real device pass with TalkBack enabled and the
-  screen off (or genuinely not watched) can confirm the experience —
-  see that spec's section 13 for the exact manual test script.
+## Current resume point
+
+1. Start from the latest `origin/codex/android-mvp-foundation`.
+2. Run `npm ci`, typecheck, lint, and Jest before editing.
+3. Preserve the validated TalkBack/focus behavior.
+4. Investigate startup-speech timing and make launch speech immediate and
+   reliable.
+5. Re-run the complete local verification matrix and physical TalkBack test
+   before closing that pass.
